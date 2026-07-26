@@ -1,0 +1,15 @@
+[package]
+name = "kt"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Client-side key-transparency verification for Notegram: sparse Merkle tree (CONIKS) proof checking and signed tree roots."
+
+[lints]
+workspace = true
+
+[dependencies]
+crypto = { path = "../crypto" }
+wire = { path = "../wire" }

@@ -1,0 +1,22 @@
+[package]
+name = "store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Encrypted local store for the Notegram client: every record is sealed with XChaCha20-Poly1305 under a per-namespace subkey before it reaches the backend. A pure-Rust in-memory backend ships by default; the SQLite/SQLCipher backend is behind the `sqlite` feature (needs a C toolchain, built on mobile/CI)."
+
+[lints]
+workspace = true
+
+[features]
+default = []
+
+sqlite = ["dep:rusqlite"]
+
+[dependencies]
+crypto = { path = "../crypto" }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+rand_core = { version = "0.6", features = ["getrandom"] }
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }

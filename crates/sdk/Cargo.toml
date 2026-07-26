@@ -1,0 +1,34 @@
+[package]
+name = "sdk"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The Notegram client SDK: composes identity, X3DH session establishment, the Double Ratchet, and the encrypted local store into one high-level client. The platform bindings (Kotlin/Swift via UniFFI) wrap this."
+
+[lints]
+workspace = true
+
+[lib]
+
+crate-type = ["lib", "cdylib"]
+
+[[bin]]
+name = "uniffi-bindgen"
+required-features = ["uniffi"]
+
+[features]
+default = []
+
+sqlite = ["store/sqlite"]
+
+uniffi = ["dep:uniffi", "uniffi/cli", "sqlite"]
+
+[dependencies]
+crypto = { path = "../crypto" }
+e2ee = { path = "../e2ee" }
+ratchet = { path = "../ratchet" }
+store = { path = "../store" }
+rand_core = { version = "0.6", features = ["getrandom"] }
+uniffi = { version = "0.28", optional = true }

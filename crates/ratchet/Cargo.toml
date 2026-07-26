@@ -1,0 +1,16 @@
+[package]
+name = "ratchet"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Signal Double Ratchet for the Notegram client: forward-secret, post-compromise-secure message encryption (client-only; the server sees only key hashes)."
+
+[lints]
+workspace = true
+
+[dependencies]
+crypto = { path = "../crypto" }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+rand_core = "0.6"

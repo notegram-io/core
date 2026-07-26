@@ -1,0 +1,19 @@
+[package]
+name = "crypto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Cryptographic primitives for the Notegram client: X25519, Ed25519, SHA-256, HMAC-SHA256, HKDF-SHA256 — thin wrappers over audited RustCrypto/dalek crates."
+
+[lints]
+workspace = true
+
+[dependencies]
+x25519-dalek = { version = "2", default-features = false, features = ["static_secrets"] }
+ed25519-dalek = { version = "2", default-features = false }
+sha2 = { version = "0.10", default-features = false }
+hmac = { version = "0.12", default-features = false }
+hkdf = { version = "0.12", default-features = false }
+rand_core = "0.6"

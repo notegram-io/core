@@ -1,0 +1,20 @@
+[package]
+name = "proto"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Notegram client transport: the secure outer frame (ChaCha20-Poly1305 + HKDF-SHA256 message keys) and inner-frame container, byte-compatible with commons/transport."
+
+[lints]
+workspace = true
+
+[dependencies]
+wire = { path = "../wire" }
+tl = { path = "../tl" }
+crypto = { path = "../crypto" }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"] }
+hkdf = "0.12"
+sha2 = "0.10"
+rand_core = "0.6"

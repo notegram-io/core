@@ -1,0 +1,14 @@
+[package]
+name = "tl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "TL (Type Language) codec for the Notegram protocol: byte-compatible Encoder/Decoder mirroring commons/tl."
+
+[lints]
+workspace = true
+
+[dependencies]
+wire = { path = "../wire" }

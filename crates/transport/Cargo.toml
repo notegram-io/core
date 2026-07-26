@@ -1,0 +1,26 @@
+[package]
+name = "transport"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Async transport driver for the Notegram client: a tokio connection that reads/writes proto secure frames, with an optional rustls TLS dialer."
+
+[lints]
+workspace = true
+
+[features]
+default = []
+
+tls = ["dep:tokio-rustls", "dep:webpki-roots", "tokio/net"]
+
+[dependencies]
+wire = { path = "../wire" }
+proto = { path = "../proto" }
+tokio = { version = "1", default-features = false, features = ["io-util"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring"], optional = true }
+webpki-roots = { version = "1", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1", default-features = false, features = ["rt", "macros", "io-util"] }

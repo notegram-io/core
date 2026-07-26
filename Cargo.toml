@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/wire",
+    "crates/tl",
+    "crates/crypto",
+    "crates/proto",
+    "crates/transport",
+    "crates/e2ee",
+    "crates/kt",
+    "crates/ratchet",
+    "crates/store",
+    "crates/sdk",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+license = "UNLICENSED"
+repository = "https://github.com/notegram-io/core"
+
+[workspace.lints.rust]
+unsafe_code = "warn"
+
+[workspace.lints.clippy]
+all = "warn"

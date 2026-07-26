@@ -1,0 +1,10 @@
+/target
+**/target
+Cargo.lock.bak
+# uniffi / platform build outputs
+/bindings
+*.so
+*.a
+*.dylib
+*.xcframework
+*.exe

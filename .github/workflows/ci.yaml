@@ -1,0 +1,84 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: core, fetch-depth: 1 }
+      - uses: actions/checkout@v4
+        with:
+          repository: "${{ github.repository_owner }}/commons"
+          path: commons
+          fetch-depth: 1
+          token: "${{ secrets.COMMONS_TOKEN || github.token }}"
+      - uses: actions/checkout@v4
+        with:
+          repository: "${{ github.repository_owner }}/session-gateway"
+          path: session-gateway
+          fetch-depth: 1
+          token: "${{ secrets.COMMONS_TOKEN || github.token }}"
+      - uses: actions/checkout@v4
+        with:
+          repository: "${{ github.repository_owner }}/directory-service"
+          path: directory-service
+          fetch-depth: 1
+          token: "${{ secrets.COMMONS_TOKEN || github.token }}"
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.26" }
+      - uses: dtolnay/rust-toolchain@stable
+        with: { components: "rustfmt, clippy" }
+
+      - name: regenerate parity vectors from the Go server
+        run: |
+          (cd core/parity && go run .)
+          (cd commons && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/proto/tests" \
+            go test ./transport -run TestEmitSecureParityVectors)
+          (cd session-gateway && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/proto/tests" \
+            go test ./internal/server -run TestEmitHandshakeParityVectors)
+          (cd session-gateway && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/e2ee/tests" \
+            go test ./internal/e2ee -run TestEmitBindingParityVectors)
+          (cd session-gateway && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/e2ee/tests" \
+            go test ./internal/e2ee -run TestEmitBindingHeaderParityVectors)
+          (cd directory-service && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/kt/tests" \
+            go test ./internal/smt -run TestEmitSMTParityVectors)
+          (cd directory-service && NG_PARITY_DIR="$GITHUB_WORKSPACE/core/crates/kt/tests" \
+            go test ./internal/username -run TestEmitMembershipParityVectors)
+      - name: parity vectors are up to date
+        working-directory: core
+        run: git diff --exit-code -- 'crates/**/tests/*.txt'
+
+      - name: fmt
+        working-directory: core
+        run: cargo fmt --check
+      - name: clippy
+        working-directory: core
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: clippy (store sqlite backend)
+        working-directory: core
+        run: cargo clippy -p store --all-targets --features sqlite -- -D warnings
+      - name: clippy (sdk uniffi bindings)
+        working-directory: core
+        run: cargo clippy -p sdk --all-targets --features uniffi -- -D warnings
+      - name: test
+        working-directory: core
+        run: cargo test --workspace
+      - name: test store sqlite feature
+        working-directory: core
+        run: cargo test -p store --features sqlite
+      - name: regenerate uniffi bindings (drift check)
+        working-directory: core
+        run: |
+          cargo build -p sdk --features uniffi
+          cargo run -p sdk --features uniffi --bin uniffi-bindgen -- \
+            generate --library target/debug/libsdk.so --language kotlin --out-dir crates/sdk/bindings/kotlin
+          cargo run -p sdk --features uniffi --bin uniffi-bindgen -- \
+            generate --library target/debug/libsdk.so --language swift --out-dir crates/sdk/bindings/swift
+          git diff --exit-code -- crates/sdk/bindings
+      - name: build tls feature
+        working-directory: core
+        run: cargo build -p transport --features tls

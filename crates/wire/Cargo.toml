@@ -1,0 +1,15 @@
+[package]
+name = "wire"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Little-endian wire primitives and length-prefixed framing for the Notegram protocol (mirror of commons/wire)."
+
+[lints]
+workspace = true
+
+[dependencies]
+
+[dev-dependencies]

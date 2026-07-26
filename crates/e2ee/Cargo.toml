@@ -1,0 +1,22 @@
+[package]
+name = "e2ee"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "End-to-end encryption engine for the Notegram client: message binding, X3DH/prekeys, double ratchet, and sender keys. Byte-compatible with the server's validated formats."
+
+[lints]
+workspace = true
+
+[dependencies]
+crypto = { path = "../crypto" }
+tl = { path = "../tl" }
+
+[dev-dependencies]
+
+serde_json = "1"
+
+ratchet = { path = "../ratchet" }
+rand_core = "0.6"
