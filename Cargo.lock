@@ -600,6 +600,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "net"
+version = "0.1.0"
+dependencies = [
+ "crypto",
+ "proto",
+ "rand_core",
+ "tl",
+ "tokio",
+ "transport",
+ "wire",
+]
+
+[[package]]
 name = "nom"
 version = "7.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"

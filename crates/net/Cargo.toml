@@ -1,0 +1,23 @@
+[package]
+name = "net"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Client network layer: edge admission, secure RPC, and the auth-key handshake driver over the transport connection."
+
+[lints]
+workspace = true
+
+[dependencies]
+wire = { path = "../wire" }
+proto = { path = "../proto" }
+tl = { path = "../tl" }
+transport = { path = "../transport" }
+rand_core = "0.6"
+tokio = { version = "1", default-features = false, features = ["io-util", "sync", "rt"] }
+
+[dev-dependencies]
+crypto = { path = "../crypto" }
+tokio = { version = "1", default-features = false, features = ["rt", "macros", "io-util"] }
