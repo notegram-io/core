@@ -40,7 +40,7 @@ impl<S> Connection<S> {
     }
 }
 
-impl<S: AsyncRead + AsyncWrite + Unpin> Connection<S> {
+impl<S: AsyncWrite + Unpin> Connection<S> {
     pub async fn send_container(&mut self, container: &[u8]) -> Result<()> {
         let msg_id = self.state.next_msg_id(unix_millis());
         let seq_no = self.state.next_seq();
@@ -63,7 +63,9 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Connection<S> {
     pub async fn send_frames(&mut self, frames: &[&[u8]]) -> Result<()> {
         self.send_container(&pack_container(frames)).await
     }
+}
 
+impl<S: AsyncRead + Unpin> Connection<S> {
     pub async fn recv_container(&mut self) -> Result<(OuterHeader, Vec<u8>)> {
         let mut len_buf = [0u8; 4];
         match self.stream.read_exact(&mut len_buf).await {
