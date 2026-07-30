@@ -1,11 +1,11 @@
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use tl::generated::{
-    AuthDevices, AuthGetDevices, DirectoryClaimUsername, DirectoryGetProfile, DirectoryProfile,
-    DirectoryResolveUsername, DirectoryResolved, DirectorySetProfile, DirectoryUsername,
-    KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysStatus, KeysUpload, KeysUploaded,
-    MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesSendEncrypted, OneTimePreKey, Ping,
-    Pong,
+    AuthDevices, AuthGetDevices, DirectoryClaimUsername, DirectoryGetMyProfile,
+    DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
+    DirectoryResolved, DirectorySetProfile, DirectoryUsername, KeysGetMyStatus, KeysGetPeerBundle,
+    KeysPeerBundle, KeysStatus, KeysUpload, KeysUploaded, MessagesEncryptedRecipient,
+    MessagesEncryptedSent, MessagesSendEncrypted, OneTimePreKey, Ping, Pong,
 };
 
 use crate::error::Result;
@@ -41,6 +41,14 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         self.rpc_mut()
             .invoke(&DirectoryGetProfile { user_id })
             .await
+    }
+
+    pub async fn get_my_profile(&mut self) -> Result<DirectoryProfile> {
+        self.rpc_mut().invoke(&DirectoryGetMyProfile).await
+    }
+
+    pub async fn get_my_username(&mut self) -> Result<DirectoryUsername> {
+        self.rpc_mut().invoke(&DirectoryGetMyUsername).await
     }
 
     pub async fn set_profile(&mut self, display_name: &str, bio: &str) -> Result<DirectoryProfile> {

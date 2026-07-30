@@ -23,12 +23,27 @@ default = []
 
 sqlite = ["store/sqlite"]
 
-uniffi = ["dep:uniffi", "uniffi/cli", "sqlite"]
+uniffi = [
+    "dep:uniffi",
+    "uniffi/cli",
+    "uniffi/tokio",
+    "sqlite",
+    "dep:net",
+    "dep:tl",
+    "dep:tokio",
+    "dep:rustls",
+    "dep:tokio-rustls",
+]
 
 [dependencies]
 crypto = { path = "../crypto" }
 e2ee = { path = "../e2ee" }
 ratchet = { path = "../ratchet" }
 store = { path = "../store" }
+net = { path = "../net", optional = true }
+tl = { path = "../tl", optional = true }
 rand_core = { version = "0.6", features = ["getrandom"] }
 uniffi = { version = "0.28", optional = true }
+tokio = { version = "1", optional = true, default-features = false, features = ["rt-multi-thread", "net", "io-util", "sync", "time"] }
+rustls = { version = "0.23", optional = true, default-features = false, features = ["ring", "std"] }
+tokio-rustls = { version = "0.26", optional = true, default-features = false, features = ["ring"] }

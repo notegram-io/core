@@ -35,6 +35,27 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         })
     }
 
+    pub async fn open_authed(
+        mut stream: S,
+        session_id: u64,
+        route_dc: u32,
+        auth_key: [u8; 32],
+        auth_key_id: u64,
+    ) -> Result<Session<S>> {
+        admission::admit(&mut stream, session_id, route_dc).await?;
+        let mut state = SecureState::new_client(session_id);
+        state.auth_key = Some(auth_key);
+        state.auth_key_id = auth_key_id;
+        state.epoch = FRAME_EPOCH;
+        state.salt = FRAME_SALT;
+        Ok(Session {
+            rpc: Rpc::new(Connection::new(stream, state)),
+            session_id,
+            authed: true,
+            user_id: 0,
+        })
+    }
+
     pub async fn help_get_config(&mut self) -> Result<HelpConfig> {
         self.rpc.invoke(&HelpGetConfig).await
     }

@@ -8,6 +8,9 @@ mod session;
 mod ffi;
 
 #[cfg(feature = "uniffi")]
+mod net_ffi;
+
+#[cfg(feature = "uniffi")]
 uniffi::setup_scaffolding!();
 
 pub use client::NotegramClient;
