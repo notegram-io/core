@@ -4560,3 +4560,39 @@ impl TlObject for SignalSessionBootstrapContract {
         })
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct UpdateNewMessages {
+    pub chat_id: i64,
+    pub sender_user_id: i64,
+    pub pending_count: i32,
+}
+
+impl TlObject for UpdateNewMessages {
+    const CTOR: u32 = 0x1f6ac3d2;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.chat_id);
+        e.long(self.sender_user_id);
+        e.int(self.pending_count);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
+        }
+        d.enter()?;
+        let chat_id = d.long()?;
+        let sender_user_id = d.long()?;
+        let pending_count = d.int()?;
+        d.leave();
+        Ok(Self {
+            chat_id,
+            sender_user_id,
+            pending_count,
+        })
+    }
+}

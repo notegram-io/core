@@ -393,6 +393,31 @@ impl NotegramCore {
         })
     }
 
+    /// Publishes a fresh signed prekey under the next id, for when the server
+    /// reports the current one is stale. Upload the result with
+    /// `NetSession.keys_upload`. The previous private key is retained so
+    /// messages already encrypted against it still open.
+    pub fn rotate_signed_prekey(
+        &self,
+        one_time_count: u32,
+    ) -> Result<crate::net_ffi::FfiPrekeyUpload, FfiError> {
+        let b = self.lock().rotate_signed_prekey(one_time_count)?;
+        Ok(crate::net_ffi::FfiPrekeyUpload {
+            identity_key: b.identity_key.to_vec(),
+            signed_pre_key_id: b.signed_pre_key_id,
+            signed_pre_key_pub: b.signed_pre_key_pub.to_vec(),
+            signed_pre_key_sig: b.signed_pre_key_sig.to_vec(),
+            one_time_pre_keys: b
+                .one_time_pre_keys
+                .into_iter()
+                .map(|k| crate::net_ffi::FfiPrekeyUploadOtk {
+                    id: k.id,
+                    pubkey: k.pubkey.to_vec(),
+                })
+                .collect(),
+        })
+    }
+
     pub fn save_message(&self, message: FfiStoredMessage) -> Result<(), FfiError> {
         Ok(self.lock().save_message(&message.into())?)
     }

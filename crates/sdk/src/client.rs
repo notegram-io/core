@@ -11,8 +11,13 @@ use crate::{Result, SdkError};
 
 const MESSAGE_NONCE_LEN: usize = 32;
 
-/// The device publishes a single signed prekey; rotation is not implemented yet.
-const SIGNED_PREKEY_ID: i32 = 1;
+/// Id of the signed prekey currently published. Rotation bumps it, and the
+/// server requires the id to strictly increase, so it has to be remembered
+/// across restarts.
+const SIGNED_PREKEY_ID_KEY: &[u8] = b"signed_prekey_id";
+
+/// Id used before any rotation has happened.
+const FIRST_SIGNED_PREKEY_ID: i32 = 1;
 
 /// Next unused one-time prekey id, so top-ups never reuse an id the server may
 /// still be handing out.
@@ -86,12 +91,8 @@ impl<B: Backend> NotegramClient<B> {
 
     pub fn generate_prekey_bundle(&mut self, one_time_count: u32) -> Result<PreKeyBundleUpload> {
         let identity = self.load_identity()?;
-        let (spk_priv, spk_pub) = crypto::x25519_generate(&mut OsRng);
-        let spk_id = SIGNED_PREKEY_ID;
-        let spk_sig = e2ee::x3dh::sign_signed_prekey(&identity.signing_seed, &spk_pub);
-        self.store
-            .put(Namespace::SignedPreKey, &spk_id.to_le_bytes(), &spk_priv)?;
-
+        let spk_id = FIRST_SIGNED_PREKEY_ID;
+        let (spk_pub, spk_sig) = self.mint_signed_prekey(&identity, spk_id)?;
         let one_time_pre_keys = self.generate_one_time_prekeys(one_time_count)?;
 
         Ok(PreKeyBundleUpload {
@@ -103,6 +104,59 @@ impl<B: Backend> NotegramClient<B> {
         })
     }
 
+    /// Replaces the signed prekey with a fresh one under the next id, for when
+    /// the server reports the current one is stale. Upload the result to
+    /// publish it.
+    ///
+    /// The previous private key is deliberately kept: messages already in
+    /// flight — and any the peer encrypts before it sees the new bundle — name
+    /// the old id in their bootstrap contract, and dropping it would make them
+    /// permanently undecryptable.
+    pub fn rotate_signed_prekey(&mut self, one_time_count: u32) -> Result<PreKeyBundleUpload> {
+        let identity = self.load_identity()?;
+        // The server rejects an id that does not strictly increase.
+        let spk_id = self
+            .current_signed_prekey_id()?
+            .checked_add(1)
+            .ok_or(SdkError::BadKeyMaterial)?;
+        let (spk_pub, spk_sig) = self.mint_signed_prekey(&identity, spk_id)?;
+
+        Ok(PreKeyBundleUpload {
+            identity_key: identity.identity_pub,
+            signed_pre_key_id: spk_id,
+            signed_pre_key_pub: spk_pub,
+            signed_pre_key_sig: spk_sig,
+            one_time_pre_keys: self.generate_one_time_prekeys(one_time_count)?,
+        })
+    }
+
+    fn mint_signed_prekey(
+        &mut self,
+        identity: &Identity,
+        spk_id: i32,
+    ) -> Result<([u8; 32], [u8; 64])> {
+        let (spk_priv, spk_pub) = crypto::x25519_generate(&mut OsRng);
+        let spk_sig = e2ee::x3dh::sign_signed_prekey(&identity.signing_seed, &spk_pub);
+        self.store
+            .put(Namespace::SignedPreKey, &spk_id.to_le_bytes(), &spk_priv)?;
+        self.store
+            .put(Namespace::Meta, SIGNED_PREKEY_ID_KEY, &spk_id.to_le_bytes())?;
+        Ok((spk_pub, spk_sig))
+    }
+
+    fn current_signed_prekey_id(&self) -> Result<i32> {
+        match self.store.get(Namespace::Meta, SIGNED_PREKEY_ID_KEY)? {
+            Some(raw) => {
+                let bytes: [u8; 4] = raw
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| SdkError::BadKeyMaterial)?;
+                Ok(i32::from_le_bytes(bytes).max(FIRST_SIGNED_PREKEY_ID))
+            }
+            None => Ok(FIRST_SIGNED_PREKEY_ID),
+        }
+    }
+
     /// Builds an upload that tops up one-time prekeys without disturbing the
     /// rest of the bundle. The server merges one-time keys rather than
     /// replacing them, but rejects a re-used id with a different key and a
@@ -112,7 +166,7 @@ impl<B: Backend> NotegramClient<B> {
     /// one-time keys are new.
     pub fn prekey_top_up(&mut self, count: u32) -> Result<PreKeyBundleUpload> {
         let identity = self.load_identity()?;
-        let spk_id = SIGNED_PREKEY_ID;
+        let spk_id = self.current_signed_prekey_id()?;
         let spk_priv = self
             .store
             .get(Namespace::SignedPreKey, &spk_id.to_le_bytes())?

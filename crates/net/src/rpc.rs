@@ -12,9 +12,15 @@ pub const LAYER: i32 = 121;
 
 const MAX_STALE: usize = 16;
 
+/// Cap on undrained server-initiated objects, so a client that never reads them
+/// cannot grow memory without bound. Losing the oldest notice is harmless: the
+/// messages themselves stay on the server until acked.
+const MAX_BUFFERED_UPDATES: usize = 256;
+
 pub struct Rpc<S> {
     conn: Connection<S>,
     pending: VecDeque<Vec<u8>>,
+    updates: VecDeque<Vec<u8>>,
 }
 
 impl<S> Rpc<S> {
@@ -22,7 +28,15 @@ impl<S> Rpc<S> {
         Rpc {
             conn,
             pending: VecDeque::new(),
+            updates: VecDeque::new(),
         }
+    }
+
+    /// Server-initiated objects seen while waiting for RPC replies. They arrive
+    /// interleaved with responses on the same connection, so they are set aside
+    /// here instead of being discarded.
+    pub fn take_updates(&mut self) -> Vec<Vec<u8>> {
+        self.updates.drain(..).collect()
     }
 
     pub fn connection_mut(&mut self) -> &mut Connection<S> {
@@ -67,9 +81,21 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
                     message: r.message,
                 });
             }
-
+            // Anything else is server-initiated (a push). Keep it: dropping it
+            // here would silently lose a new-message notice that happened to
+            // land while an RPC was in flight.
+            self.record_update(obj);
         }
         Err(NetError::NoResponse)
+    }
+
+    fn record_update(&mut self, obj: Vec<u8>) {
+        // Bound the queue: a client that never drains updates must not grow
+        // memory without limit.
+        if self.updates.len() >= MAX_BUFFERED_UPDATES {
+            self.updates.pop_front();
+        }
+        self.updates.push_back(obj);
     }
 
     async fn next_object(&mut self) -> Result<Vec<u8>> {
@@ -182,4 +208,35 @@ mod tests {
         assert_eq!(second.ping_id, 5);
         handle.await.unwrap();
     }
+    #[tokio::test]
+    async fn push_arriving_during_an_rpc_is_kept_not_dropped() {
+        use tl::generated::UpdateNewMessages;
+
+        let (client, server) = tokio::io::duplex(4096);
+        let mut srv = server_conn(server, 11);
+        let handle = tokio::spawn(async move {
+            let ping = read_invoked_ping(&mut srv).await;
+            // The server announces a message and only then answers the ping.
+            let push = encode_to_vec(&UpdateNewMessages {
+                chat_id: 77,
+                sender_user_id: 42,
+                pending_count: 1,
+            })
+            .unwrap();
+            let pong = encode_to_vec(&Pong { ping_id: ping.ping_id, now: 3 }).unwrap();
+            srv.send_frames(&[&push, &pong]).await.unwrap();
+        });
+
+        let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(11)));
+        let pong: Pong = rpc.invoke(&Ping { ping_id: 5 }).await.expect("invoke");
+        assert_eq!(pong.ping_id, 5, "the reply still resolves");
+
+        let updates = rpc.take_updates();
+        assert_eq!(updates.len(), 1, "the push was retained, not discarded");
+        let update = decode_from::<UpdateNewMessages>(&updates[0], Limits::default()).unwrap();
+        assert_eq!((update.chat_id, update.sender_user_id), (77, 42));
+        assert!(rpc.take_updates().is_empty(), "draining clears the queue");
+        handle.await.unwrap();
+    }
+
 }

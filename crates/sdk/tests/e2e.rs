@@ -215,3 +215,67 @@ fn message_history_is_per_chat_and_chronological() {
     assert_eq!(previews[0].chat_id, 10, "newest chat first");
     assert_eq!(previews[0].text, "third");
 }
+
+#[test]
+fn rotating_the_signed_prekey_keeps_earlier_messages_decryptable() {
+    // Alice publishes a bundle; Bob encrypts against it.
+    let mut alice = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
+    let alice_identity = alice.create_identity().unwrap();
+    let first = alice.generate_prekey_bundle(2).unwrap();
+
+    let mut bob = NotegramClient::open(BOB_KEY, MemoryBackend::default()).unwrap();
+    bob.create_identity().unwrap();
+    let alice_addr = PeerAddress { user_id: 1, device_id: 1 };
+    let bob_addr = PeerAddress { user_id: 2, device_id: 1 };
+    let otk = first.one_time_pre_keys.first().unwrap();
+
+    let envelope = bob
+        .encrypt_message(
+            2,
+            1,
+            alice_addr,
+            77,
+            "before-rotation",
+            b"sent before rotation",
+            Some(&sdk::RecipientPreKeyBundle {
+                identity_key: first.identity_key,
+                signing_pub: alice_identity.signing_pub,
+                signed_prekey_id: first.signed_pre_key_id,
+                signed_prekey_pub: first.signed_pre_key_pub,
+                signed_prekey_sig: first.signed_pre_key_sig,
+                one_time_prekey_id: otk.id,
+                one_time_prekey_pub: Some(otk.pubkey),
+            }),
+        )
+        .unwrap();
+
+    // Alice rotates before ever opening that message.
+    let rotated = alice.rotate_signed_prekey(2).unwrap();
+    assert!(
+        rotated.signed_pre_key_id > first.signed_pre_key_id,
+        "the server rejects an id that does not strictly increase"
+    );
+    assert_ne!(rotated.signed_pre_key_pub, first.signed_pre_key_pub);
+    assert!(
+        rotated.one_time_pre_keys[0].id > first.one_time_pre_keys[1].id,
+        "one-time ids keep marching forward across a rotation"
+    );
+
+    // The envelope names the *old* signed prekey, so rotation must not have
+    // discarded its private half.
+    let plaintext = alice
+        .decrypt_message(
+            bob_addr,
+            &envelope.envelope_type,
+            &envelope.header,
+            &envelope.ciphertext,
+            &envelope.associated_data,
+        )
+        .unwrap();
+    assert_eq!(plaintext, b"sent before rotation");
+
+    // A top-up after rotation must advertise the rotated prekey, not the old one.
+    let top_up = alice.prekey_top_up(1).unwrap();
+    assert_eq!(top_up.signed_pre_key_id, rotated.signed_pre_key_id);
+    assert_eq!(top_up.signed_pre_key_pub, rotated.signed_pre_key_pub);
+}

@@ -1,5 +1,6 @@
 use tokio::io::{AsyncRead, AsyncWrite};
 
+use tl::TlObject;
 use tl::generated::{
     AuthDevices, AuthGetDevices, DirectoryClaimUsername, DirectoryGetMyProfile,
     DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
@@ -7,7 +8,7 @@ use tl::generated::{
     KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
     KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesEncryptedAcked, MessagesEncryptedBatch,
     MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesGetEncrypted, MessagesSendEncrypted,
-    OneTimePreKey, Ping, Pong,
+    OneTimePreKey, Ping, Pong, UpdateNewMessages,
 };
 
 use crate::error::Result;
@@ -128,6 +129,23 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
 
     pub async fn get_encrypted_messages(&mut self, limit: i32) -> Result<MessagesEncryptedBatch> {
         self.rpc_mut().invoke(&MessagesGetEncrypted { limit }).await
+    }
+
+    /// Server-initiated notices collected since the last call, decoded to the
+    /// ones this client understands. They ride the same connection as RPC
+    /// replies, so they are picked up whenever any request runs — the keepalive
+    /// ping alone is enough to surface them promptly.
+    pub fn take_new_message_updates(&mut self) -> Vec<UpdateNewMessages> {
+        self.rpc_mut()
+            .take_updates()
+            .into_iter()
+            .filter_map(|raw| {
+                if raw.len() < 4 || wire::u32_le(&raw[0..4]) != UpdateNewMessages::CTOR {
+                    return None;
+                }
+                tl::decode_from::<UpdateNewMessages>(&raw, tl::Limits::default()).ok()
+            })
+            .collect()
     }
 
     pub async fn ack_encrypted(&mut self, server_msg_id: &str) -> Result<MessagesEncryptedAcked> {

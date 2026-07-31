@@ -154,6 +154,14 @@ pub struct FfiEncryptedSent {
     pub recipient_count: i32,
 }
 
+/// A server push saying this device has messages waiting.
+#[derive(uniffi::Record)]
+pub struct FfiNewMessageUpdate {
+    pub chat_id: i64,
+    pub sender_user_id: i64,
+    pub pending_count: i32,
+}
+
 /// An encrypted message waiting for this device. Feed `header`, `ciphertext`
 /// and `associated_data` into `NotegramCore.decrypt_message`, then ack it by
 /// `server_msg_id` so the server stops redelivering it.
@@ -543,6 +551,27 @@ impl NetSession {
                 created_at: m.created_at,
             })
             .collect())
+    }
+
+    /// New-message notices the server pushed since the last call. They arrive
+    /// on the same connection as RPC replies, so any request — the keepalive
+    /// ping included — surfaces them; this call itself does no I/O.
+    ///
+    /// A notice is a hint, not delivery: fetch with `get_encrypted_messages`
+    /// after one. Missing a notice only delays the fetch, since the ciphertext
+    /// stays on the server until acked.
+    pub async fn take_new_message_updates(&self) -> Vec<FfiNewMessageUpdate> {
+        self.inner
+            .lock()
+            .await
+            .take_new_message_updates()
+            .into_iter()
+            .map(|u| FfiNewMessageUpdate {
+                chat_id: u.chat_id,
+                sender_user_id: u.sender_user_id,
+                pending_count: u.pending_count,
+            })
+            .collect()
     }
 
     pub async fn ack_encrypted(&self, server_msg_id: String) -> Result<bool, FfiNetError> {
