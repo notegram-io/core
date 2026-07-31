@@ -1,7 +1,8 @@
 use std::sync::Mutex;
 
 use crate::{
-    Identity, InboundPreKeys, NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity, SdkError,
+    Identity, InboundPreKeys, NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity,
+    RecipientPreKeyBundle, SdkError,
 };
 use store::SqliteBackend;
 
@@ -15,20 +16,22 @@ pub enum FfiError {
     NoIdentity,
 
     BadInput,
+
+    UntrustedPeerBundleProof(String),
 }
 
 impl core::fmt::Display for FfiError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let s = match self {
-            FfiError::Store => "store error",
-            FfiError::Session => "session error",
-            FfiError::NoSession => "no session for peer",
-            FfiError::BadPrekeySignature => "signed prekey signature invalid",
-            FfiError::BadKeyMaterial => "malformed key material",
-            FfiError::NoIdentity => "no local identity",
-            FfiError::BadInput => "argument had wrong length",
-        };
-        write!(f, "notegram: {s}")
+        match self {
+            FfiError::Store => write!(f, "notegram: store error"),
+            FfiError::Session => write!(f, "notegram: session error"),
+            FfiError::NoSession => write!(f, "notegram: no session for peer"),
+            FfiError::BadPrekeySignature => write!(f, "notegram: signed prekey signature invalid"),
+            FfiError::BadKeyMaterial => write!(f, "notegram: malformed key material"),
+            FfiError::NoIdentity => write!(f, "notegram: no local identity"),
+            FfiError::BadInput => write!(f, "notegram: argument had wrong length"),
+            FfiError::UntrustedPeerBundleProof(w) => write!(f, "notegram: peer bundle proof rejected: {w}"),
+        }
     }
 }
 
@@ -88,6 +91,56 @@ pub struct FfiPreKeyBundle {
     pub one_time_prekey_pub: Option<Vec<u8>>,
 }
 
+/// The recipient's C2-KT-verified prekey bundle — build from
+/// `NotegramCore.verify_peer_bundle`'s result. Only needed when there is no
+/// existing outbound ratchet session with this peer yet.
+#[derive(uniffi::Record)]
+pub struct FfiRecipientPreKeyBundle {
+    pub identity_key: Vec<u8>,
+    pub signing_pub: Vec<u8>,
+    pub signed_prekey_id: i32,
+    pub signed_prekey_pub: Vec<u8>,
+    pub signed_prekey_sig: Vec<u8>,
+    pub one_time_prekey_id: i32,
+    pub one_time_prekey_pub: Option<Vec<u8>>,
+}
+
+#[derive(uniffi::Record)]
+pub struct FfiOutgoingEnvelope {
+    pub envelope_type: String,
+    pub header: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+    pub associated_data: Vec<u8>,
+}
+
+/// Trust anchors the app pins for key-transparency verification (analogous to
+/// how `server_ed_pub` is supplied by the caller of `NetSession::connect`
+/// rather than hardcoded in `core`).
+#[derive(uniffi::Record)]
+pub struct FfiKeyTransparencyTrust {
+    pub signing_public_keys: Vec<Vec<u8>>,
+    pub witness_public_keys: Vec<Vec<u8>>,
+    pub min_witness_signatures: u32,
+}
+
+/// A peer's prekey bundle after its `PrekeyBundleProof` (device-level key
+/// transparency chain: receipt signature, checkpoint hash-chain, consistency
+/// proof, witness signatures) has been fully verified and the device's
+/// trusted signing key extracted, and the signed-prekey signature checked
+/// against it. Safe to feed into `establish_outbound_session`.
+#[derive(uniffi::Record)]
+pub struct FfiVerifiedPrekeyBundle {
+    pub user_id: i64,
+    pub device_id: i64,
+    pub identity_key: Vec<u8>,
+    pub device_signing_key: Vec<u8>,
+    pub signed_pre_key_id: i32,
+    pub signed_pre_key_pub: Vec<u8>,
+    pub signed_pre_key_sig: Vec<u8>,
+    pub one_time_pre_key_id: i32,
+    pub one_time_pre_key_pub: Option<Vec<u8>>,
+}
+
 #[derive(uniffi::Object)]
 pub struct NotegramCore {
     inner: Mutex<NotegramClient<SqliteBackend>>,
@@ -128,6 +181,79 @@ impl NotegramCore {
 
     pub fn public_identity(&self) -> Result<FfiPublicIdentity, FfiError> {
         Ok(self.lock().public_identity()?.into())
+    }
+
+    pub fn generate_prekey_bundle(
+        &self,
+        one_time_count: u32,
+    ) -> Result<crate::net_ffi::FfiPrekeyUpload, FfiError> {
+        let b = self.lock().generate_prekey_bundle(one_time_count)?;
+        Ok(crate::net_ffi::FfiPrekeyUpload {
+            identity_key: b.identity_key.to_vec(),
+            signed_pre_key_id: b.signed_pre_key_id,
+            signed_pre_key_pub: b.signed_pre_key_pub.to_vec(),
+            signed_pre_key_sig: b.signed_pre_key_sig.to_vec(),
+            one_time_pre_keys: b
+                .one_time_pre_keys
+                .into_iter()
+                .map(|k| crate::net_ffi::FfiPrekeyUploadOtk {
+                    id: k.id,
+                    pubkey: k.pubkey.to_vec(),
+                })
+                .collect(),
+        })
+    }
+
+    /// Verify a peer's `PrekeyBundleProof` (the `proof` field of a
+    /// `KeysPeerBundle` device entry) against pinned key-transparency trust
+    /// anchors, and check the signed-prekey signature against the trusted
+    /// `DeviceSigningKey` extracted from the proof. See `kt::device` for the
+    /// verifier (byte-parity ported from the server's reference
+    /// implementation) and `e2ee::x3dh::verify_signed_prekey` for the final
+    /// signature check.
+    pub fn verify_peer_bundle(
+        &self,
+        proof: Vec<u8>,
+        trust: FfiKeyTransparencyTrust,
+    ) -> Result<FfiVerifiedPrekeyBundle, FfiError> {
+        let signing_public_keys = trust
+            .signing_public_keys
+            .iter()
+            .map(|k| arr32(k))
+            .collect::<Result<Vec<_>, _>>()?;
+        let witness_public_keys = trust
+            .witness_public_keys
+            .iter()
+            .map(|k| arr32(k))
+            .collect::<Result<Vec<_>, _>>()?;
+        let anchors = kt::device::TrustAnchors {
+            signing_public_keys: &signing_public_keys,
+            witness_public_keys: &witness_public_keys,
+            min_witness_signatures: trust.min_witness_signatures as usize,
+        };
+
+        let verified = kt::device::verify_prekey_bundle_proof(&proof, &anchors)
+            .map_err(|e| FfiError::UntrustedPeerBundleProof(e.to_string()))?;
+
+        if !e2ee::x3dh::verify_signed_prekey(
+            &verified.device_signing_key,
+            &verified.signed_pre_key_pub,
+            &verified.signed_pre_key_sig,
+        ) {
+            return Err(FfiError::BadPrekeySignature);
+        }
+
+        Ok(FfiVerifiedPrekeyBundle {
+            user_id: verified.user_id,
+            device_id: verified.device_id,
+            identity_key: verified.identity_key.to_vec(),
+            device_signing_key: verified.device_signing_key.to_vec(),
+            signed_pre_key_id: verified.signed_pre_key_id,
+            signed_pre_key_pub: verified.signed_pre_key_pub.to_vec(),
+            signed_pre_key_sig: verified.signed_pre_key_sig.to_vec(),
+            one_time_pre_key_id: verified.one_time_pre_key_id,
+            one_time_pre_key_pub: verified.one_time_pre_key_pub.map(|k| k.to_vec()),
+        })
     }
 
     pub fn has_session(&self, peer: FfiPeerAddress) -> Result<bool, FfiError> {
@@ -200,6 +326,67 @@ impl NotegramCore {
         Ok(self
             .lock()
             .decrypt(peer.into(), &message, &associated_data)?)
+    }
+
+    /// Opens an incoming message, establishing the inbound session first when
+    /// the envelope is a `signal-prekey.v1` handshake. Returns the plaintext.
+    pub fn decrypt_message(
+        &self,
+        peer: FfiPeerAddress,
+        envelope_type: String,
+        header: Vec<u8>,
+        ciphertext: Vec<u8>,
+        associated_data: Vec<u8>,
+    ) -> Result<Vec<u8>, FfiError> {
+        Ok(self.lock().decrypt_message(
+            peer.into(),
+            &envelope_type,
+            &header,
+            &ciphertext,
+            &associated_data,
+        )?)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn encrypt_message(
+        &self,
+        sender_user_id: i64,
+        sender_device_id: i64,
+        peer: FfiPeerAddress,
+        chat_id: i64,
+        client_msg_id: String,
+        plaintext: Vec<u8>,
+        new_session_bundle: Option<FfiRecipientPreKeyBundle>,
+    ) -> Result<FfiOutgoingEnvelope, FfiError> {
+        let bundle = new_session_bundle
+            .map(|b| -> Result<RecipientPreKeyBundle, FfiError> {
+                Ok(RecipientPreKeyBundle {
+                    identity_key: arr32(&b.identity_key)?,
+                    signing_pub: arr32(&b.signing_pub)?,
+                    signed_prekey_id: b.signed_prekey_id,
+                    signed_prekey_pub: arr32(&b.signed_prekey_pub)?,
+                    signed_prekey_sig: arr64(&b.signed_prekey_sig)?,
+                    one_time_prekey_id: b.one_time_prekey_id,
+                    one_time_prekey_pub: b.one_time_prekey_pub.as_deref().map(arr32).transpose()?,
+                })
+            })
+            .transpose()?;
+
+        let env = self.lock().encrypt_message(
+            sender_user_id,
+            sender_device_id,
+            peer.into(),
+            chat_id,
+            &client_msg_id,
+            &plaintext,
+            bundle.as_ref(),
+        )?;
+        Ok(FfiOutgoingEnvelope {
+            envelope_type: env.envelope_type,
+            header: env.header,
+            ciphertext: env.ciphertext,
+            associated_data: env.associated_data,
+        })
     }
 }
 

@@ -13,7 +13,9 @@ mod net_ffi;
 #[cfg(feature = "uniffi")]
 uniffi::setup_scaffolding!();
 
-pub use client::NotegramClient;
+pub use client::{
+    NotegramClient, OneTimePreKeyPub, OutgoingEnvelope, PreKeyBundleUpload, RecipientPreKeyBundle,
+};
 pub use identity::{Identity, PublicIdentity};
 pub use session::{InboundPreKeys, PeerAddress, PreKeyBundle};
 

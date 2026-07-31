@@ -77,6 +77,21 @@ pub struct FfiAuthKeys {
 }
 
 #[derive(uniffi::Record)]
+pub struct FfiPrekeyUploadOtk {
+    pub id: i32,
+    pub pubkey: Vec<u8>,
+}
+
+#[derive(uniffi::Record)]
+pub struct FfiPrekeyUpload {
+    pub identity_key: Vec<u8>,
+    pub signed_pre_key_id: i32,
+    pub signed_pre_key_pub: Vec<u8>,
+    pub signed_pre_key_sig: Vec<u8>,
+    pub one_time_pre_keys: Vec<FfiPrekeyUploadOtk>,
+}
+
+#[derive(uniffi::Record)]
 pub struct FfiResolved {
     pub username: String,
     pub user_id: i64,
@@ -95,6 +110,55 @@ pub struct FfiDevice {
     pub device_id: i64,
     pub purpose: String,
     pub disabled: bool,
+}
+
+#[derive(uniffi::Record)]
+pub struct FfiPeerDevice {
+    pub device_id: i64,
+    pub identity_key: Vec<u8>,
+    pub signed_pre_key_id: i32,
+    pub signed_pre_key_pub: Vec<u8>,
+    pub signed_pre_key_sig: Vec<u8>,
+    pub one_time_pre_key_id: i32,
+    pub one_time_pre_key_pub: Vec<u8>,
+    /// Raw `PrekeyBundleProof` JSON blob — feed into `NotegramCore.verify_peer_bundle`
+    /// before trusting any of the fields above.
+    pub proof: Vec<u8>,
+}
+
+#[derive(uniffi::Record)]
+pub struct FfiEncryptedRecipient {
+    pub user_id: i64,
+    pub device_id: i64,
+    pub envelope_type: String,
+    pub header: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+}
+
+#[derive(uniffi::Record)]
+pub struct FfiEncryptedSent {
+    pub server_msg_id: String,
+    pub created_at: i64,
+    pub recipient_count: i32,
+}
+
+/// An encrypted message waiting for this device. Feed `header`, `ciphertext`
+/// and `associated_data` into `NotegramCore.decrypt_message`, then ack it by
+/// `server_msg_id` so the server stops redelivering it.
+#[derive(uniffi::Record)]
+pub struct FfiIncomingMessage {
+    pub server_msg_id: String,
+    pub sender_user_id: i64,
+    pub sender_device_id: i64,
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    pub schema: String,
+    pub suite: String,
+    pub envelope_type: String,
+    pub header: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+    pub associated_data: Vec<u8>,
+    pub created_at: i64,
 }
 
 #[derive(Debug)]
@@ -318,5 +382,143 @@ impl NetSession {
 
     pub async fn ping(&self, ping_id: i64) -> Result<i64, FfiNetError> {
         Ok(self.inner.lock().await.ping(ping_id).await?.now)
+    }
+
+    pub async fn keys_upload(&self, bundle: FfiPrekeyUpload) -> Result<i64, FfiNetError> {
+        let one_time = bundle
+            .one_time_pre_keys
+            .into_iter()
+            .map(|k| tl::generated::OneTimePreKey {
+                id: k.id,
+                r#pub: k.pubkey,
+            })
+            .collect();
+        let r = self
+            .inner
+            .lock()
+            .await
+            .keys_upload(
+                bundle.identity_key,
+                bundle.signed_pre_key_id,
+                bundle.signed_pre_key_pub,
+                bundle.signed_pre_key_sig,
+                one_time,
+            )
+            .await?;
+        Ok(r.device_id)
+    }
+
+    pub async fn set_device_signing_key(
+        &self,
+        public_key: Vec<u8>,
+    ) -> Result<i64, FfiNetError> {
+        let r = self
+            .inner
+            .lock()
+            .await
+            .set_device_signing_key(public_key)
+            .await?;
+        Ok(r.device_id)
+    }
+
+    pub async fn get_peer_bundle(&self, user_id: i64) -> Result<Vec<FfiPeerDevice>, FfiNetError> {
+        let r = self.inner.lock().await.get_peer_bundle(user_id).await?;
+        Ok(r.devices
+            .into_iter()
+            .map(|d| FfiPeerDevice {
+                device_id: d.device_id,
+                identity_key: d.identity_key,
+                signed_pre_key_id: d.signed_pre_key_id,
+                signed_pre_key_pub: d.signed_pre_key_pub,
+                signed_pre_key_sig: d.signed_pre_key_sig,
+                one_time_pre_key_id: d.one_time_pre_key_id,
+                one_time_pre_key_pub: d.one_time_pre_key_pub,
+                proof: d.proof,
+            })
+            .collect())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn send_encrypted(
+        &self,
+        client_msg_id: String,
+        chat_id: i64,
+        schema: String,
+        suite: String,
+        recipients: Vec<FfiEncryptedRecipient>,
+        associated_data: Vec<u8>,
+        forward_info: Option<Vec<u8>>,
+        reply_to: Option<i64>,
+    ) -> Result<FfiEncryptedSent, FfiNetError> {
+        let recipients = recipients
+            .into_iter()
+            .map(|r| tl::generated::MessagesEncryptedRecipient {
+                user_id: r.user_id,
+                device_id: r.device_id,
+                envelope_type: r.envelope_type,
+                header: r.header,
+                ciphertext: r.ciphertext,
+            })
+            .collect();
+        let r = self
+            .inner
+            .lock()
+            .await
+            .send_encrypted(
+                &client_msg_id,
+                chat_id,
+                &schema,
+                &suite,
+                recipients,
+                associated_data,
+                forward_info,
+                reply_to,
+            )
+            .await?;
+        Ok(FfiEncryptedSent {
+            server_msg_id: r.server_msg_id,
+            created_at: r.created_at,
+            recipient_count: r.recipient_count,
+        })
+    }
+
+    pub async fn get_encrypted_messages(
+        &self,
+        limit: i32,
+    ) -> Result<Vec<FfiIncomingMessage>, FfiNetError> {
+        let batch = self
+            .inner
+            .lock()
+            .await
+            .get_encrypted_messages(limit)
+            .await?;
+        Ok(batch
+            .items
+            .into_iter()
+            .map(|m| FfiIncomingMessage {
+                server_msg_id: m.server_msg_id,
+                sender_user_id: m.sender_user_id,
+                sender_device_id: m.sender_device_id,
+                chat_id: m.chat_id,
+                client_msg_id: m.client_msg_id,
+                schema: m.schema,
+                suite: m.suite,
+                envelope_type: m.envelope_type,
+                header: m.header,
+                ciphertext: m.ciphertext,
+                associated_data: m.associated_data,
+                created_at: m.created_at,
+            })
+            .collect())
+    }
+
+    pub async fn ack_encrypted(&self, server_msg_id: String) -> Result<bool, FfiNetError> {
+        let r = self
+            .inner
+            .lock()
+            .await
+            .ack_encrypted(&server_msg_id)
+            .await?;
+        Ok(r.deleted)
     }
 }

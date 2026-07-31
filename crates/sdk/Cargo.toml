@@ -30,6 +30,7 @@ uniffi = [
     "sqlite",
     "dep:net",
     "dep:tl",
+    "dep:kt",
     "dep:tokio",
     "dep:rustls",
     "dep:tokio-rustls",
@@ -42,6 +43,7 @@ ratchet = { path = "../ratchet" }
 store = { path = "../store" }
 net = { path = "../net", optional = true }
 tl = { path = "../tl", optional = true }
+kt = { path = "../kt", optional = true }
 rand_core = { version = "0.6", features = ["getrandom"] }
 uniffi = { version = "0.28", optional = true }
 tokio = { version = "1", optional = true, default-features = false, features = ["rt-multi-thread", "net", "io-util", "sync", "time"] }

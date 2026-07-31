@@ -25,10 +25,7 @@ impl TlObject for AuthActionResult {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -66,10 +63,7 @@ impl TlObject for AuthBeginHandshake {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let tmp_token = d.bytes()?;
@@ -100,10 +94,7 @@ impl TlObject for AuthCreateDeviceLink {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -171,10 +162,7 @@ impl TlObject for AuthDevice {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -239,10 +227,7 @@ impl TlObject for AuthDeviceLinkToken {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let link_token = d.bytes()?;
@@ -286,10 +271,7 @@ impl TlObject for AuthDevices {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let devices = {
@@ -301,7 +283,9 @@ impl TlObject for AuthDevices {
             __v
         };
         d.leave();
-        Ok(Self { devices })
+        Ok(Self {
+            devices,
+        })
     }
 }
 
@@ -322,15 +306,14 @@ impl TlObject for AuthDisableDevice {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
         d.leave();
-        Ok(Self { device_id })
+        Ok(Self {
+            device_id,
+        })
     }
 }
 
@@ -359,10 +342,7 @@ impl TlObject for AuthFinishHandshake {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let tmp_token = d.bytes()?;
@@ -395,10 +375,7 @@ impl TlObject for AuthGetDevices {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -429,10 +406,7 @@ impl TlObject for AuthHandshakeOk {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let auth_key_id = d.ulong()?;
@@ -478,10 +452,7 @@ impl TlObject for AuthHandshakeParams {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let server_nonce = d.bytes()?;
@@ -518,10 +489,7 @@ impl TlObject for AuthLogoutCurrent {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -546,15 +514,14 @@ impl TlObject for AuthLogoutDevice {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
         d.leave();
-        Ok(Self { device_id })
+        Ok(Self {
+            device_id,
+        })
     }
 }
 
@@ -581,10 +548,7 @@ impl TlObject for AuthRedeemDeviceLink {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let link_token = d.bytes()?;
@@ -622,10 +586,7 @@ impl TlObject for AuthSendEmailCode {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let email = d.string()?;
@@ -661,10 +622,7 @@ impl TlObject for AuthSentCode {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let email = d.string()?;
@@ -700,10 +658,7 @@ impl TlObject for AuthVerified {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -739,10 +694,7 @@ impl TlObject for AuthVerifyEmailCode {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let email = d.string()?;
@@ -778,17 +730,18 @@ impl TlObject for DcOption {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let id = d.int()?;
         let host = d.string()?;
         let port = d.int()?;
         d.leave();
-        Ok(Self { id, host, port })
+        Ok(Self {
+            id,
+            host,
+            port,
+        })
     }
 }
 
@@ -825,10 +778,7 @@ impl TlObject for DevicePrekeyBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -872,15 +822,14 @@ impl TlObject for DirectoryChangeUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let name = d.string()?;
         d.leave();
-        Ok(Self { name })
+        Ok(Self {
+            name,
+        })
     }
 }
 
@@ -901,15 +850,14 @@ impl TlObject for DirectoryClaimUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let name = d.string()?;
         d.leave();
-        Ok(Self { name })
+        Ok(Self {
+            name,
+        })
     }
 }
 
@@ -934,10 +882,7 @@ impl TlObject for DirectoryDiscovery {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -966,10 +911,7 @@ impl TlObject for DirectoryGetMyProfile {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -991,10 +933,7 @@ impl TlObject for DirectoryGetMyUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1019,15 +958,14 @@ impl TlObject for DirectoryGetProfile {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         d.leave();
-        Ok(Self { user_id })
+        Ok(Self {
+            user_id,
+        })
     }
 }
 
@@ -1058,10 +996,7 @@ impl TlObject for DirectoryProfile {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -1096,10 +1031,7 @@ impl TlObject for DirectoryReleaseUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1124,15 +1056,14 @@ impl TlObject for DirectoryResolveUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let name = d.string()?;
         d.leave();
-        Ok(Self { name })
+        Ok(Self {
+            name,
+        })
     }
 }
 
@@ -1159,10 +1090,7 @@ impl TlObject for DirectoryResolved {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let username = d.string()?;
@@ -1196,10 +1124,7 @@ impl TlObject for DirectorySetDiscovery {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let discoverable_by_username = d.bool()?;
@@ -1229,16 +1154,16 @@ impl TlObject for DirectorySetProfile {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let display_name = d.string()?;
         let bio = d.string()?;
         d.leave();
-        Ok(Self { display_name, bio })
+        Ok(Self {
+            display_name,
+            bio,
+        })
     }
 }
 
@@ -1269,10 +1194,7 @@ impl TlObject for DirectoryUsername {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let username = d.string()?;
@@ -1312,16 +1234,16 @@ impl TlObject for FloodWait {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let wait = d.int()?;
         let message = d.string()?;
         d.leave();
-        Ok(Self { wait, message })
+        Ok(Self {
+            wait,
+            message,
+        })
     }
 }
 
@@ -1350,10 +1272,7 @@ impl TlObject for HelpConfig {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let now = d.int()?;
@@ -1366,7 +1285,10 @@ impl TlObject for HelpConfig {
             __v
         };
         d.leave();
-        Ok(Self { now, dc_options })
+        Ok(Self {
+            now,
+            dc_options,
+        })
     }
 }
 
@@ -1384,10 +1306,7 @@ impl TlObject for HelpGetConfig {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1422,10 +1341,7 @@ impl TlObject for IdentityDeviceState {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -1465,16 +1381,16 @@ impl TlObject for InvokeWithLayer {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let layer = d.int()?;
         let query = d.bytes()?;
         d.leave();
-        Ok(Self { layer, query })
+        Ok(Self {
+            layer,
+            query,
+        })
     }
 }
 
@@ -1517,10 +1433,7 @@ impl TlObject for KeysAckArtifact {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -1573,10 +1486,7 @@ impl TlObject for KeysArtifact {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let artifact_id = d.string()?;
@@ -1622,10 +1532,7 @@ impl TlObject for KeysArtifactAcked {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let artifact_id = d.string()?;
@@ -1659,10 +1566,7 @@ impl TlObject for KeysArtifactStored {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let artifact_id = d.string()?;
@@ -1700,10 +1604,7 @@ impl TlObject for KeysArtifacts {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let items = {
@@ -1715,7 +1616,9 @@ impl TlObject for KeysArtifacts {
             __v
         };
         d.leave();
-        Ok(Self { items })
+        Ok(Self {
+            items,
+        })
     }
 }
 
@@ -1748,10 +1651,7 @@ impl TlObject for KeysCapabilities {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -1796,10 +1696,7 @@ impl TlObject for KeysDeviceSigningKey {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -1831,15 +1728,14 @@ impl TlObject for KeysGetArtifacts {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let limit = d.int()?;
         d.leave();
-        Ok(Self { limit })
+        Ok(Self {
+            limit,
+        })
     }
 }
 
@@ -1862,16 +1758,16 @@ impl TlObject for KeysGetCapabilities {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         let device_id = d.long()?;
         d.leave();
-        Ok(Self { user_id, device_id })
+        Ok(Self {
+            user_id,
+            device_id,
+        })
     }
 }
 
@@ -1892,15 +1788,14 @@ impl TlObject for KeysGetIdentityPin {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         d.leave();
-        Ok(Self { user_id })
+        Ok(Self {
+            user_id,
+        })
     }
 }
 
@@ -1918,10 +1813,7 @@ impl TlObject for KeysGetMyIdentity {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1943,10 +1835,7 @@ impl TlObject for KeysGetMyStatus {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1968,10 +1857,7 @@ impl TlObject for KeysGetMyVerification {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         d.leave();
@@ -1996,15 +1882,14 @@ impl TlObject for KeysGetPeerBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         d.leave();
-        Ok(Self { user_id })
+        Ok(Self {
+            user_id,
+        })
     }
 }
 
@@ -2025,15 +1910,14 @@ impl TlObject for KeysGetPeerIdentity {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         d.leave();
-        Ok(Self { user_id })
+        Ok(Self {
+            user_id,
+        })
     }
 }
 
@@ -2056,16 +1940,16 @@ impl TlObject for KeysGetPeerPackages {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         let limit = d.int()?;
         d.leave();
-        Ok(Self { user_id, limit })
+        Ok(Self {
+            user_id,
+            limit,
+        })
     }
 }
 
@@ -2086,15 +1970,14 @@ impl TlObject for KeysGetPeerVerification {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
         d.leave();
-        Ok(Self { user_id })
+        Ok(Self {
+            user_id,
+        })
     }
 }
 
@@ -2131,10 +2014,7 @@ impl TlObject for KeysGetTransparency {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -2203,10 +2083,7 @@ impl TlObject for KeysIdentityPin {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2282,10 +2159,7 @@ impl TlObject for KeysIdentitySnapshot {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2348,10 +2222,7 @@ impl TlObject for KeysIdentityVerification {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2413,10 +2284,7 @@ impl TlObject for KeysPackage {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let package_id = d.string()?;
@@ -2464,10 +2332,7 @@ impl TlObject for KeysPackageStored {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let package_id = d.string()?;
@@ -2507,10 +2372,7 @@ impl TlObject for KeysPeerBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2523,7 +2385,10 @@ impl TlObject for KeysPeerBundle {
             __v
         };
         d.leave();
-        Ok(Self { user_id, devices })
+        Ok(Self {
+            user_id,
+            devices,
+        })
     }
 }
 
@@ -2552,10 +2417,7 @@ impl TlObject for KeysPeerPackages {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2568,7 +2430,10 @@ impl TlObject for KeysPeerPackages {
             __v
         };
         d.leave();
-        Ok(Self { user_id, items })
+        Ok(Self {
+            user_id,
+            items,
+        })
     }
 }
 
@@ -2591,10 +2456,7 @@ impl TlObject for KeysPinIdentity {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2636,10 +2498,7 @@ impl TlObject for KeysPutArtifact {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let client_ref = d.string()?;
@@ -2691,10 +2550,7 @@ impl TlObject for KeysPutPackage {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let client_ref = d.string()?;
@@ -2740,10 +2596,7 @@ impl TlObject for KeysSetCapabilities {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let features = {
@@ -2755,7 +2608,9 @@ impl TlObject for KeysSetCapabilities {
             __v
         };
         d.leave();
-        Ok(Self { features })
+        Ok(Self {
+            features,
+        })
     }
 }
 
@@ -2776,15 +2631,14 @@ impl TlObject for KeysSetDeviceSigningKey {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let public_key = d.bytes()?;
         d.leave();
-        Ok(Self { public_key })
+        Ok(Self {
+            public_key,
+        })
     }
 }
 
@@ -2823,10 +2677,7 @@ impl TlObject for KeysStatus {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -2892,10 +2743,7 @@ impl TlObject for KeysTransparencyCheckpoint {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -2961,10 +2809,7 @@ impl TlObject for KeysTransparencyConsistencyProof {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -3033,10 +2878,7 @@ impl TlObject for KeysTransparencyEntry {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -3108,10 +2950,7 @@ impl TlObject for KeysTransparencyLog {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -3181,10 +3020,7 @@ impl TlObject for KeysTransparencyWitnessSignature {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -3244,10 +3080,7 @@ impl TlObject for KeysUpload {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let identity_key = d.bytes()?;
@@ -3308,10 +3141,7 @@ impl TlObject for KeysUploaded {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let device_id = d.long()?;
@@ -3385,10 +3215,7 @@ impl TlObject for MessageAssociatedData {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -3401,11 +3228,7 @@ impl TlObject for MessageAssociatedData {
         let sender_device_id = d.long()?;
         let chat_id = d.long()?;
         let client_msg_id = d.string()?;
-        let forward_info_sha256 = if flags.has(0) {
-            Some(d.string()?)
-        } else {
-            None
-        };
+        let forward_info_sha256 = if flags.has(0) { Some(d.string()?) } else { None };
         let reply_to = if flags.has(1) { Some(d.long()?) } else { None };
         d.leave();
         Ok(Self {
@@ -3469,10 +3292,7 @@ impl TlObject for MessageEnvelopeHeaderV2 {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let schema = d.string()?;
@@ -3560,10 +3380,7 @@ impl TlObject for MessageEnvelopeHeaderV3 {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let schema = d.string()?;
@@ -3655,10 +3472,7 @@ impl TlObject for MessageEnvelopeHeaderV4 {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let schema = d.string()?;
@@ -3718,15 +3532,14 @@ impl TlObject for MessagesAckEncrypted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let server_msg_id = d.string()?;
         d.leave();
-        Ok(Self { server_msg_id })
+        Ok(Self {
+            server_msg_id,
+        })
     }
 }
 
@@ -3749,10 +3562,7 @@ impl TlObject for MessagesEncryptedAcked {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let server_msg_id = d.string()?;
@@ -3788,10 +3598,7 @@ impl TlObject for MessagesEncryptedBatch {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let items = {
@@ -3803,7 +3610,9 @@ impl TlObject for MessagesEncryptedBatch {
             __v
         };
         d.leave();
-        Ok(Self { items })
+        Ok(Self {
+            items,
+        })
     }
 }
 
@@ -3860,10 +3669,7 @@ impl TlObject for MessagesEncryptedDelivery {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -3928,10 +3734,7 @@ impl TlObject for MessagesEncryptedRecipient {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let user_id = d.long()?;
@@ -3971,10 +3774,7 @@ impl TlObject for MessagesEncryptedSent {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let server_msg_id = d.string()?;
@@ -4006,15 +3806,14 @@ impl TlObject for MessagesGetEncrypted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let limit = d.int()?;
         d.leave();
-        Ok(Self { limit })
+        Ok(Self {
+            limit,
+        })
     }
 }
 
@@ -4041,10 +3840,7 @@ impl TlObject for MessagesPersistEncrypted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let records = {
@@ -4056,7 +3852,9 @@ impl TlObject for MessagesPersistEncrypted {
             __v
         };
         d.leave();
-        Ok(Self { records })
+        Ok(Self {
+            records,
+        })
     }
 }
 
@@ -4081,10 +3879,7 @@ impl TlObject for MessagesPersisted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let server_msg_id = d.string()?;
@@ -4144,10 +3939,7 @@ impl TlObject for MessagesSendEncrypted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -4239,10 +4031,7 @@ impl TlObject for MessagesStoredRecord {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let flags = crate::Flags(d.uint()?);
@@ -4307,16 +4096,16 @@ impl TlObject for OneTimePreKey {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let id = d.int()?;
         let r#pub = d.bytes()?;
         d.leave();
-        Ok(Self { id, r#pub })
+        Ok(Self {
+            id,
+            r#pub,
+        })
     }
 }
 
@@ -4337,15 +4126,14 @@ impl TlObject for Ping {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let ping_id = d.long()?;
         d.leave();
-        Ok(Self { ping_id })
+        Ok(Self {
+            ping_id,
+        })
     }
 }
 
@@ -4368,16 +4156,16 @@ impl TlObject for Pong {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let ping_id = d.long()?;
         let now = d.long()?;
         d.leave();
-        Ok(Self { ping_id, now })
+        Ok(Self {
+            ping_id,
+            now,
+        })
     }
 }
 
@@ -4416,10 +4204,7 @@ impl TlObject for RecoveryBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let bundle_id = d.string()?;
@@ -4467,16 +4252,16 @@ impl TlObject for RecoveryBundleDeleted {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let bundle_id = d.string()?;
         let deleted = d.bool()?;
         d.leave();
-        Ok(Self { bundle_id, deleted })
+        Ok(Self {
+            bundle_id,
+            deleted,
+        })
     }
 }
 
@@ -4503,10 +4288,7 @@ impl TlObject for RecoveryDeleteBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let bundle_id = d.string()?;
@@ -4544,10 +4326,7 @@ impl TlObject for RecoveryGetBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let access_proof_issued_at = d.long()?;
@@ -4595,10 +4374,7 @@ impl TlObject for RecoveryPutBundle {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let client_ref = d.string()?;
@@ -4644,16 +4420,16 @@ impl TlObject for RpcResult {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let code = d.int()?;
         let message = d.string()?;
         d.leave();
-        Ok(Self { code, message })
+        Ok(Self {
+            code,
+            message,
+        })
     }
 }
 
@@ -4690,10 +4466,7 @@ impl TlObject for SenderKeyGroupMembershipContract {
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let suite = d.string()?;
@@ -4730,10 +4503,13 @@ pub struct SignalSessionBootstrapContract {
     pub recipient_signed_pre_key_id: i32,
     pub recipient_signed_pre_key_pub_sha256: String,
     pub recipient_signed_pre_key_sig_sha256: String,
+    pub recipient_one_time_pre_key_id: i32,
+    pub sender_identity_key: Vec<u8>,
+    pub sender_ephemeral_key: Vec<u8>,
 }
 
 impl TlObject for SignalSessionBootstrapContract {
-    const CTOR: u32 = 0xe2ee0003;
+    const CTOR: u32 = 0xe2ee0008;
 
     fn encode(&self, e: &mut Encoder) -> Result<()> {
         e.ctor(Self::CTOR);
@@ -4745,16 +4521,16 @@ impl TlObject for SignalSessionBootstrapContract {
         e.int(self.recipient_signed_pre_key_id);
         e.string(&self.recipient_signed_pre_key_pub_sha256)?;
         e.string(&self.recipient_signed_pre_key_sig_sha256)?;
+        e.int(self.recipient_one_time_pre_key_id);
+        e.bytes(&self.sender_identity_key)?;
+        e.bytes(&self.sender_ephemeral_key)?;
         Ok(())
     }
 
     fn decode(d: &mut Decoder) -> Result<Self> {
         let ctor = d.ctor()?;
         if ctor != Self::CTOR {
-            return Err(crate::TlError::UnexpectedCtor {
-                expected: Self::CTOR,
-                got: ctor,
-            });
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
         }
         d.enter()?;
         let suite = d.string()?;
@@ -4765,6 +4541,9 @@ impl TlObject for SignalSessionBootstrapContract {
         let recipient_signed_pre_key_id = d.int()?;
         let recipient_signed_pre_key_pub_sha256 = d.string()?;
         let recipient_signed_pre_key_sig_sha256 = d.string()?;
+        let recipient_one_time_pre_key_id = d.int()?;
+        let sender_identity_key = d.bytes()?;
+        let sender_ephemeral_key = d.bytes()?;
         d.leave();
         Ok(Self {
             suite,
@@ -4775,6 +4554,9 @@ impl TlObject for SignalSessionBootstrapContract {
             recipient_signed_pre_key_id,
             recipient_signed_pre_key_pub_sha256,
             recipient_signed_pre_key_sig_sha256,
+            recipient_one_time_pre_key_id,
+            sender_identity_key,
+            sender_ephemeral_key,
         })
     }
 }

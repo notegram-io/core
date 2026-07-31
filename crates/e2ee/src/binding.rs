@@ -3,6 +3,23 @@ use tl::generated::{
     MessageEnvelopeHeaderV4, SenderKeyGroupMembershipContract, SignalSessionBootstrapContract,
 };
 
+/// Protocol-wide constants mirroring `session-gateway/internal/cryptopolicy/policy.go`.
+/// Must stay byte-identical to the server's `cryptopolicy` constants — a mismatch here
+/// makes every message rejected with BAD_ASSOCIATED_DATA.
+pub const SCHEMA_LIBSIGNAL_SESSION_ENVELOPE_V1: &str = "libsignal-session-envelope.v1";
+pub const MESSAGE_SUITE_LIBSIGNAL_X3DH_DV1: &str = "libsignal-x3dh-doubleratchet.v1";
+pub const ENVELOPE_TYPE_SIGNAL_PREKEY_V1: &str = "signal-prekey.v1";
+pub const ENVELOPE_TYPE_SIGNAL_V1: &str = "signal-message.v1";
+
+pub const CRYPTO_POLICY_PROFILE: &str = "notegram-e2ee-production.v1";
+pub const CRYPTO_POLICY_VERSION: i64 = 1;
+/// `cryptopolicy.DefaultManifestSHA256()` on the server — sha256 of the
+/// canonical-JSON default policy manifest. Computed once from the running
+/// server (session-gateway), not re-derived here since the manifest itself
+/// isn't part of this crate's concerns, just its hash.
+pub const CRYPTO_POLICY_SHA256_HEX: &str =
+    "e0321b9400bcbeb437e85e92482321a705ce33e7a59f5b8d14b908eca54c93d8";
+
 pub struct AssociatedDataInput {
     pub schema: String,
     pub suite: String,
@@ -66,6 +83,17 @@ pub struct SignalBootstrapInput {
     pub recipient_signed_pre_key_id: i32,
     pub recipient_signed_pre_key_pub: Vec<u8>,
     pub recipient_signed_pre_key_sig: Vec<u8>,
+
+    /// Which of the recipient's one-time prekeys was consumed, so they know
+    /// which private key to feed into X3DH. 0 means none was available.
+    pub recipient_one_time_pre_key_id: i32,
+
+    /// The initiator's X3DH inputs, as raw keys rather than digests: the
+    /// recipient needs them to run Diffie-Hellman. The ephemeral key is
+    /// single-use and exists nowhere else, so without it the recipient cannot
+    /// establish the inbound session at all.
+    pub sender_identity_key: Vec<u8>,
+    pub sender_ephemeral_key: Vec<u8>,
 }
 
 pub fn build_envelope_header_v3(
@@ -148,6 +176,34 @@ pub fn build_envelope_header_v4(
     tl::encode_to_vec(&header).expect("envelope header v4 encodes")
 }
 
+/// The X3DH parameters a recipient needs to open a `signal-prekey.v1` envelope,
+/// read back out of the header's bootstrap contract.
+pub struct ParsedSignalBootstrap {
+    pub recipient_user_id: i64,
+    pub recipient_device_id: i64,
+    pub recipient_signed_pre_key_id: i32,
+    pub recipient_one_time_pre_key_id: i32,
+    pub sender_identity_key: [u8; 32],
+    pub sender_ephemeral_key: [u8; 32],
+}
+
+/// Decodes a v3 envelope header and returns its bootstrap contract. Returns
+/// `None` if the header is not a v3 header, does not carry a contract, or the
+/// contract's key material is malformed — all of which mean the recipient
+/// cannot establish the inbound session and must reject the message.
+pub fn parse_signal_bootstrap(header: &[u8]) -> Option<ParsedSignalBootstrap> {
+    let decoded: MessageEnvelopeHeaderV3 = tl::decode_from(header, tl::Limits::default()).ok()?;
+    let contract = decoded.signal_session_bootstrap;
+    Some(ParsedSignalBootstrap {
+        recipient_user_id: contract.recipient_user_id,
+        recipient_device_id: contract.recipient_device_id,
+        recipient_signed_pre_key_id: contract.recipient_signed_pre_key_id,
+        recipient_one_time_pre_key_id: contract.recipient_one_time_pre_key_id,
+        sender_identity_key: contract.sender_identity_key.try_into().ok()?,
+        sender_ephemeral_key: contract.sender_ephemeral_key.try_into().ok()?,
+    })
+}
+
 fn envelope_header_v2(
     input: &EnvelopeHeaderInput,
     associated_data: &[u8],
@@ -188,6 +244,9 @@ fn signal_bootstrap_contract(input: &SignalBootstrapInput) -> SignalSessionBoots
         recipient_signed_pre_key_sig_sha256: hex_lower(&crypto::sha256(
             &input.recipient_signed_pre_key_sig,
         )),
+        recipient_one_time_pre_key_id: input.recipient_one_time_pre_key_id,
+        sender_identity_key: input.sender_identity_key.clone(),
+        sender_ephemeral_key: input.sender_ephemeral_key.clone(),
     }
 }
 

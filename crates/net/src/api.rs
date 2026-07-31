@@ -3,9 +3,11 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tl::generated::{
     AuthDevices, AuthGetDevices, DirectoryClaimUsername, DirectoryGetMyProfile,
     DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
-    DirectoryResolved, DirectorySetProfile, DirectoryUsername, KeysGetMyStatus, KeysGetPeerBundle,
-    KeysPeerBundle, KeysStatus, KeysUpload, KeysUploaded, MessagesEncryptedRecipient,
-    MessagesEncryptedSent, MessagesSendEncrypted, OneTimePreKey, Ping, Pong,
+    DirectoryResolved, DirectorySetProfile, DirectoryUsername, KeysDeviceSigningKey,
+    KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
+    KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesEncryptedAcked, MessagesEncryptedBatch,
+    MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesGetEncrypted, MessagesSendEncrypted,
+    OneTimePreKey, Ping, Pong,
 };
 
 use crate::error::Result;
@@ -83,6 +85,15 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         self.rpc_mut().invoke(&KeysGetMyStatus).await
     }
 
+    pub async fn set_device_signing_key(
+        &mut self,
+        public_key: Vec<u8>,
+    ) -> Result<KeysDeviceSigningKey> {
+        self.rpc_mut()
+            .invoke(&KeysSetDeviceSigningKey { public_key })
+            .await
+    }
+
     pub async fn get_peer_bundle(&mut self, user_id: i64) -> Result<KeysPeerBundle> {
         self.rpc_mut()
             .invoke(&KeysGetPeerBundle { user_id })
@@ -111,6 +122,18 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
                 associated_data,
                 forward_info,
                 reply_to,
+            })
+            .await
+    }
+
+    pub async fn get_encrypted_messages(&mut self, limit: i32) -> Result<MessagesEncryptedBatch> {
+        self.rpc_mut().invoke(&MessagesGetEncrypted { limit }).await
+    }
+
+    pub async fn ack_encrypted(&mut self, server_msg_id: &str) -> Result<MessagesEncryptedAcked> {
+        self.rpc_mut()
+            .invoke(&MessagesAckEncrypted {
+                server_msg_id: server_msg_id.to_string(),
             })
             .await
     }

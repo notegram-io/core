@@ -111,6 +111,9 @@ fn envelope_headers_match_server() {
                     recipient_signed_pre_key_sig: unhex(
                         b["recipient_signed_pre_key_sig_hex"].as_str().unwrap(),
                     ),
+                    recipient_one_time_pre_key_id: bi("recipient_one_time_pre_key_id") as i32,
+                    sender_identity_key: unhex(b["sender_identity_key_hex"].as_str().unwrap()),
+                    sender_ephemeral_key: unhex(b["sender_ephemeral_key_hex"].as_str().unwrap()),
                 };
                 build_envelope_header_v3(&header_input, &ad_bytes, &ct_bytes, &nonce, &bootstrap)
             }
