@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use crate::{
     Identity, InboundPreKeys, NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity,
-    RecipientPreKeyBundle, SdkError,
+    RecipientPreKeyBundle, SdkError, StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -139,6 +139,44 @@ pub struct FfiVerifiedPrekeyBundle {
     pub signed_pre_key_sig: Vec<u8>,
     pub one_time_pre_key_id: i32,
     pub one_time_pre_key_pub: Option<Vec<u8>>,
+}
+
+/// A message in local history. The server keeps only ciphertext and drops it on
+/// ack, so this is the durable copy of a conversation.
+#[derive(uniffi::Record)]
+pub struct FfiStoredMessage {
+    pub chat_id: i64,
+    pub peer_user_id: i64,
+    pub outgoing: bool,
+    pub client_msg_id: String,
+    pub text: String,
+    pub created_at: i64,
+}
+
+impl From<StoredMessage> for FfiStoredMessage {
+    fn from(m: StoredMessage) -> Self {
+        FfiStoredMessage {
+            chat_id: m.chat_id,
+            peer_user_id: m.peer_user_id,
+            outgoing: m.outgoing,
+            client_msg_id: m.client_msg_id,
+            text: m.text,
+            created_at: m.created_at,
+        }
+    }
+}
+
+impl From<FfiStoredMessage> for StoredMessage {
+    fn from(m: FfiStoredMessage) -> Self {
+        StoredMessage {
+            chat_id: m.chat_id,
+            peer_user_id: m.peer_user_id,
+            outgoing: m.outgoing,
+            client_msg_id: m.client_msg_id,
+            text: m.text,
+            created_at: m.created_at,
+        }
+    }
 }
 
 #[derive(uniffi::Object)]
@@ -326,6 +364,61 @@ impl NotegramCore {
         Ok(self
             .lock()
             .decrypt(peer.into(), &message, &associated_data)?)
+    }
+
+    /// Builds an upload that adds `count` fresh one-time prekeys when the
+    /// server reports the device is running low. Pass the result straight to
+    /// `NetSession.keys_upload`: it repeats the existing identity and signed
+    /// prekey unchanged (the server rejects a changed one under the same id)
+    /// and only the one-time keys are new, with ids continuing the sequence so
+    /// nothing the server still advertises is invalidated.
+    pub fn prekey_top_up(
+        &self,
+        count: u32,
+    ) -> Result<crate::net_ffi::FfiPrekeyUpload, FfiError> {
+        let b = self.lock().prekey_top_up(count)?;
+        Ok(crate::net_ffi::FfiPrekeyUpload {
+            identity_key: b.identity_key.to_vec(),
+            signed_pre_key_id: b.signed_pre_key_id,
+            signed_pre_key_pub: b.signed_pre_key_pub.to_vec(),
+            signed_pre_key_sig: b.signed_pre_key_sig.to_vec(),
+            one_time_pre_keys: b
+                .one_time_pre_keys
+                .into_iter()
+                .map(|k| crate::net_ffi::FfiPrekeyUploadOtk {
+                    id: k.id,
+                    pubkey: k.pubkey.to_vec(),
+                })
+                .collect(),
+        })
+    }
+
+    pub fn save_message(&self, message: FfiStoredMessage) -> Result<(), FfiError> {
+        Ok(self.lock().save_message(&message.into())?)
+    }
+
+    /// Messages of one chat, oldest first. `limit` of 0 means no cap.
+    pub fn list_messages(
+        &self,
+        chat_id: i64,
+        limit: u32,
+    ) -> Result<Vec<FfiStoredMessage>, FfiError> {
+        Ok(self
+            .lock()
+            .list_messages(chat_id, limit)?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
+    /// Latest message per chat, newest chat first — for the chat list.
+    pub fn list_chat_previews(&self) -> Result<Vec<FfiStoredMessage>, FfiError> {
+        Ok(self
+            .lock()
+            .list_chat_previews()?
+            .into_iter()
+            .map(Into::into)
+            .collect())
     }
 
     /// Opens an incoming message, establishing the inbound session first when

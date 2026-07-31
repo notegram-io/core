@@ -3,12 +3,20 @@ use ratchet::DoubleRatchet;
 use store::{Backend, Namespace, SecureStore};
 
 use crate::identity::{Identity, PublicIdentity};
+use crate::messages::{self, StoredMessage};
 use crate::session::{
     establish_inbound, establish_outbound, InboundPreKeys, PeerAddress, PreKeyBundle,
 };
 use crate::{Result, SdkError};
 
 const MESSAGE_NONCE_LEN: usize = 32;
+
+/// The device publishes a single signed prekey; rotation is not implemented yet.
+const SIGNED_PREKEY_ID: i32 = 1;
+
+/// Next unused one-time prekey id, so top-ups never reuse an id the server may
+/// still be handing out.
+const ONE_TIME_PREKEY_SEQ_KEY: &[u8] = b"one_time_prekey_seq";
 
 /// The recipient's verified prekey bundle, as returned by C2-KT's
 /// `verify_peer_bundle` — required only when there is no existing outbound
@@ -79,22 +87,12 @@ impl<B: Backend> NotegramClient<B> {
     pub fn generate_prekey_bundle(&mut self, one_time_count: u32) -> Result<PreKeyBundleUpload> {
         let identity = self.load_identity()?;
         let (spk_priv, spk_pub) = crypto::x25519_generate(&mut OsRng);
-        let spk_id: i32 = 1;
+        let spk_id = SIGNED_PREKEY_ID;
         let spk_sig = e2ee::x3dh::sign_signed_prekey(&identity.signing_seed, &spk_pub);
         self.store
             .put(Namespace::SignedPreKey, &spk_id.to_le_bytes(), &spk_priv)?;
 
-        let mut one_time_pre_keys = Vec::with_capacity(one_time_count as usize);
-        for i in 0..one_time_count {
-            let (otk_priv, otk_pub) = crypto::x25519_generate(&mut OsRng);
-            let otk_id = (i as i32) + 1;
-            self.store
-                .put(Namespace::PreKey, &otk_id.to_le_bytes(), &otk_priv)?;
-            one_time_pre_keys.push(OneTimePreKeyPub {
-                id: otk_id,
-                pubkey: otk_pub,
-            });
-        }
+        let one_time_pre_keys = self.generate_one_time_prekeys(one_time_count)?;
 
         Ok(PreKeyBundleUpload {
             identity_key: identity.identity_pub,
@@ -103,6 +101,76 @@ impl<B: Backend> NotegramClient<B> {
             signed_pre_key_sig: spk_sig,
             one_time_pre_keys,
         })
+    }
+
+    /// Builds an upload that tops up one-time prekeys without disturbing the
+    /// rest of the bundle. The server merges one-time keys rather than
+    /// replacing them, but rejects a re-used id with a different key and a
+    /// changed signed prekey under the same id — so this resends the existing
+    /// signed prekey byte-for-byte (its public key and signature are both
+    /// recomputed deterministically from the stored private key) and only the
+    /// one-time keys are new.
+    pub fn prekey_top_up(&mut self, count: u32) -> Result<PreKeyBundleUpload> {
+        let identity = self.load_identity()?;
+        let spk_id = SIGNED_PREKEY_ID;
+        let spk_priv = self
+            .store
+            .get(Namespace::SignedPreKey, &spk_id.to_le_bytes())?
+            .ok_or(SdkError::BadKeyMaterial)?;
+        let spk_priv: [u8; 32] = spk_priv
+            .as_slice()
+            .try_into()
+            .map_err(|_| SdkError::BadKeyMaterial)?;
+        let spk_pub = crypto::x25519_public(&spk_priv);
+        let spk_sig = e2ee::x3dh::sign_signed_prekey(&identity.signing_seed, &spk_pub);
+
+        Ok(PreKeyBundleUpload {
+            identity_key: identity.identity_pub,
+            signed_pre_key_id: spk_id,
+            signed_pre_key_pub: spk_pub,
+            signed_pre_key_sig: spk_sig,
+            one_time_pre_keys: self.generate_one_time_prekeys(count)?,
+        })
+    }
+
+    /// Mints more one-time prekeys, continuing the id sequence. Each is handed
+    /// out once and then deleted, so a device runs out after enough sessions and
+    /// has to top up; ids must never restart, or a fresh private key would
+    /// overwrite one the server still advertises and those sessions would fail
+    /// to decrypt.
+    pub fn generate_one_time_prekeys(&mut self, count: u32) -> Result<Vec<OneTimePreKeyPub>> {
+        let mut next_id = self.next_one_time_prekey_id()?;
+        let mut out = Vec::with_capacity(count as usize);
+        for _ in 0..count {
+            let (otk_priv, otk_pub) = crypto::x25519_generate(&mut OsRng);
+            self.store
+                .put(Namespace::PreKey, &next_id.to_le_bytes(), &otk_priv)?;
+            out.push(OneTimePreKeyPub {
+                id: next_id,
+                pubkey: otk_pub,
+            });
+            next_id += 1;
+        }
+        self.store.put(
+            Namespace::Meta,
+            ONE_TIME_PREKEY_SEQ_KEY,
+            &next_id.to_le_bytes(),
+        )?;
+        Ok(out)
+    }
+
+    fn next_one_time_prekey_id(&self) -> Result<i32> {
+        match self.store.get(Namespace::Meta, ONE_TIME_PREKEY_SEQ_KEY)? {
+            Some(raw) => {
+                let bytes: [u8; 4] = raw
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| SdkError::BadKeyMaterial)?;
+                Ok(i32::from_le_bytes(bytes).max(1))
+            }
+            // Ids are 1-based: the server treats 0 as "no one-time prekey".
+            None => Ok(1),
+        }
     }
 
     pub fn into_backend(self) -> B {
@@ -346,6 +414,49 @@ impl<B: Backend> NotegramClient<B> {
         let plaintext = ratchet.decrypt(message, associated_data, &mut OsRng)?;
         self.save_session(peer, &ratchet)?;
         Ok(plaintext)
+    }
+
+    /// Records a message in local history. Writing the same `client_msg_id`
+    /// again overwrites that row, so a redelivered message cannot duplicate.
+    pub fn save_message(&mut self, msg: &StoredMessage) -> Result<()> {
+        let key = messages::message_key(msg.chat_id, msg.created_at, &msg.client_msg_id);
+        self.store
+            .put(Namespace::Message, &key, &messages::encode_message(msg))?;
+        Ok(())
+    }
+
+    /// Messages of one chat, oldest first. `limit` keeps the newest ones when
+    /// the history is longer.
+    pub fn list_messages(&self, chat_id: i64, limit: u32) -> Result<Vec<StoredMessage>> {
+        let prefix = messages::chat_key_prefix(chat_id);
+        let mut out = Vec::new();
+        for (key, value) in self.store.list(Namespace::Message)? {
+            if !key.starts_with(&prefix) {
+                continue;
+            }
+            out.push(messages::decode_message(&value)?);
+        }
+        out.sort_by_key(|m| (m.created_at, m.client_msg_id.clone()));
+        if limit > 0 && out.len() > limit as usize {
+            out.drain(..out.len() - limit as usize);
+        }
+        Ok(out)
+    }
+
+    /// The most recent message of every chat, newest chat first — enough to
+    /// render a chat list without loading full histories.
+    pub fn list_chat_previews(&self) -> Result<Vec<StoredMessage>> {
+        let mut latest: Vec<StoredMessage> = Vec::new();
+        for (_, value) in self.store.list(Namespace::Message)? {
+            let msg = messages::decode_message(&value)?;
+            match latest.iter_mut().find(|m| m.chat_id == msg.chat_id) {
+                Some(existing) if msg.created_at > existing.created_at => *existing = msg,
+                Some(_) => {}
+                None => latest.push(msg),
+            }
+        }
+        latest.sort_by_key(|m| std::cmp::Reverse(m.created_at));
+        Ok(latest)
     }
 
     fn load_identity(&self) -> Result<Identity> {

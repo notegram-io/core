@@ -139,3 +139,79 @@ fn outbound_rejects_forged_signed_prekey() {
         Some(sdk::SdkError::BadPrekeySignature)
     );
 }
+
+#[test]
+fn one_time_prekey_top_ups_never_reuse_an_id() {
+    let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
+    client.create_identity().unwrap();
+
+    let first = client.generate_prekey_bundle(3).unwrap();
+    let second = client.generate_one_time_prekeys(3).unwrap();
+    let third = client.generate_one_time_prekeys(2).unwrap();
+
+    let ids: Vec<i32> = first
+        .one_time_pre_keys
+        .iter()
+        .chain(second.iter())
+        .chain(third.iter())
+        .map(|k| k.id)
+        .collect();
+
+    assert_eq!(ids, vec![1, 2, 3, 4, 5, 6, 7, 8], "ids continue across top-ups");
+
+    // Reusing an id would silently overwrite a private key the server still
+    // advertises, so those sessions could never be decrypted.
+    let mut sorted = ids.clone();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(sorted.len(), ids.len(), "ids must be unique");
+}
+
+#[test]
+fn message_history_is_per_chat_and_chronological() {
+    let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
+
+    let msg = |chat: i64, peer: i64, at: i64, id: &str, text: &str, outgoing: bool| {
+        sdk::StoredMessage {
+            chat_id: chat,
+            peer_user_id: peer,
+            outgoing,
+            client_msg_id: id.to_string(),
+            text: text.to_string(),
+            created_at: at,
+        }
+    };
+
+    // Saved out of order and across two chats.
+    client.save_message(&msg(10, 1, 300, "c", "third", false)).unwrap();
+    client.save_message(&msg(10, 1, 100, "a", "first", true)).unwrap();
+    client.save_message(&msg(20, 2, 150, "x", "other chat", true)).unwrap();
+    client.save_message(&msg(10, 1, 200, "b", "second", false)).unwrap();
+
+    let chat10: Vec<String> = client
+        .list_messages(10, 0)
+        .unwrap()
+        .into_iter()
+        .map(|m| m.text)
+        .collect();
+    assert_eq!(chat10, vec!["first", "second", "third"]);
+    assert_eq!(client.list_messages(20, 0).unwrap().len(), 1);
+
+    // limit keeps the newest tail.
+    let tail: Vec<String> = client
+        .list_messages(10, 2)
+        .unwrap()
+        .into_iter()
+        .map(|m| m.text)
+        .collect();
+    assert_eq!(tail, vec!["second", "third"]);
+
+    // Re-saving the same client_msg_id updates in place rather than duplicating.
+    client.save_message(&msg(10, 1, 200, "b", "second (edited)", false)).unwrap();
+    assert_eq!(client.list_messages(10, 0).unwrap().len(), 3);
+
+    let previews = client.list_chat_previews().unwrap();
+    assert_eq!(previews.len(), 2, "one row per chat");
+    assert_eq!(previews[0].chat_id, 10, "newest chat first");
+    assert_eq!(previews[0].text, "third");
+}

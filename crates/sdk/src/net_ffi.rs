@@ -91,6 +91,18 @@ pub struct FfiPrekeyUpload {
     pub one_time_pre_keys: Vec<FfiPrekeyUploadOtk>,
 }
 
+/// Prekey health for this device. `low_watermark` is the server telling the
+/// client to top up before it runs out of one-time prekeys.
+#[derive(uniffi::Record)]
+pub struct FfiKeysStatus {
+    pub device_id: i64,
+    pub remaining_one_time: i32,
+    pub low_watermark: bool,
+    pub target_one_time: i32,
+    pub max_one_time: i32,
+    pub needs_signed_pre_key_rotation: bool,
+}
+
 #[derive(uniffi::Record)]
 pub struct FfiResolved {
     pub username: String,
@@ -341,6 +353,15 @@ impl NetSession {
         Ok(self.inner.lock().await.claim_username(&name).await?.username)
     }
 
+    pub async fn get_profile(&self, user_id: i64) -> Result<FfiProfile, FfiNetError> {
+        let p = self.inner.lock().await.get_profile(user_id).await?;
+        Ok(FfiProfile {
+            user_id: p.user_id,
+            display_name: p.display_name,
+            bio: p.bio,
+        })
+    }
+
     pub async fn get_my_profile(&self) -> Result<FfiProfile, FfiNetError> {
         let p = self.inner.lock().await.get_my_profile().await?;
         Ok(FfiProfile {
@@ -406,6 +427,18 @@ impl NetSession {
             )
             .await?;
         Ok(r.device_id)
+    }
+
+    pub async fn keys_status(&self) -> Result<FfiKeysStatus, FfiNetError> {
+        let s = self.inner.lock().await.keys_status().await?;
+        Ok(FfiKeysStatus {
+            device_id: s.device_id,
+            remaining_one_time: s.remaining_one_time,
+            low_watermark: s.low_watermark,
+            target_one_time: s.target_one_time,
+            max_one_time: s.max_one_time,
+            needs_signed_pre_key_rotation: s.needs_signed_pre_key_rotation,
+        })
     }
 
     pub async fn set_device_signing_key(

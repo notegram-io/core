@@ -23,6 +23,10 @@ pub enum Namespace {
     Outbox,
 
     Meta,
+
+    /// Decrypted message history, kept locally so conversations survive leaving
+    /// a screen and so the server never holds plaintext.
+    Message,
 }
 
 impl Namespace {
@@ -38,6 +42,7 @@ impl Namespace {
             Namespace::InboundCache => "inbound_cache",
             Namespace::Outbox => "outbox",
             Namespace::Meta => "meta",
+            Namespace::Message => "message",
         }
     }
 }
