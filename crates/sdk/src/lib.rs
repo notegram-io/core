@@ -18,7 +18,7 @@ pub use client::{
     NotegramClient, OneTimePreKeyPub, OutgoingEnvelope, PreKeyBundleUpload, RecipientPreKeyBundle,
 };
 pub use identity::{Identity, PublicIdentity};
-pub use messages::StoredMessage;
+pub use messages::{MessageStatus, StoredMessage};
 pub use session::{InboundPreKeys, PeerAddress, PreKeyBundle};
 
 #[derive(Debug, PartialEq, Eq)]

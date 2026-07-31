@@ -179,6 +179,7 @@ fn message_history_is_per_chat_and_chronological() {
             client_msg_id: id.to_string(),
             text: text.to_string(),
             created_at: at,
+            status: sdk::MessageStatus::Sent,
         }
     };
 
@@ -278,4 +279,46 @@ fn rotating_the_signed_prekey_keeps_earlier_messages_decryptable() {
     let top_up = alice.prekey_top_up(1).unwrap();
     assert_eq!(top_up.signed_pre_key_id, rotated.signed_pre_key_id);
     assert_eq!(top_up.signed_pre_key_pub, rotated.signed_pre_key_pub);
+}
+
+#[test]
+fn delivery_status_advances_but_never_regresses() {
+    let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
+    let outgoing = sdk::StoredMessage {
+        chat_id: 5,
+        peer_user_id: 9,
+        outgoing: true,
+        client_msg_id: "m-1".into(),
+        text: "hi".into(),
+        created_at: 1_000,
+        status: sdk::MessageStatus::Sent,
+    };
+    client.save_message(&outgoing).unwrap();
+
+    assert!(client
+        .mark_message_status(5, "m-1", sdk::MessageStatus::Delivered)
+        .unwrap());
+    assert_eq!(
+        client.list_messages(5, 0).unwrap()[0].status,
+        sdk::MessageStatus::Delivered
+    );
+
+    assert!(client
+        .mark_message_status(5, "m-1", sdk::MessageStatus::Read)
+        .unwrap());
+
+    // Notices can arrive out of order; a late delivery receipt must not undo a
+    // read receipt the user already saw.
+    assert!(!client
+        .mark_message_status(5, "m-1", sdk::MessageStatus::Delivered)
+        .unwrap());
+    assert_eq!(
+        client.list_messages(5, 0).unwrap()[0].status,
+        sdk::MessageStatus::Read
+    );
+
+    // Unknown ids and incoming messages are left alone.
+    assert!(!client
+        .mark_message_status(5, "nope", sdk::MessageStatus::Delivered)
+        .unwrap());
 }

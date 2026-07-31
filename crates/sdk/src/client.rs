@@ -3,7 +3,7 @@ use ratchet::DoubleRatchet;
 use store::{Backend, Namespace, SecureStore};
 
 use crate::identity::{Identity, PublicIdentity};
-use crate::messages::{self, StoredMessage};
+use crate::messages::{self, MessageStatus, StoredMessage};
 use crate::session::{
     establish_inbound, establish_outbound, InboundPreKeys, PeerAddress, PreKeyBundle,
 };
@@ -495,6 +495,36 @@ impl<B: Backend> NotegramClient<B> {
             out.drain(..out.len() - limit as usize);
         }
         Ok(out)
+    }
+
+    /// Advances the delivery status of an outgoing message, matched by the id
+    /// the sender chose. Status only moves forward, so notices arriving out of
+    /// order (a delivery receipt after a read receipt) cannot regress it.
+    /// Returns whether anything changed.
+    pub fn mark_message_status(
+        &mut self,
+        chat_id: i64,
+        client_msg_id: &str,
+        status: MessageStatus,
+    ) -> Result<bool> {
+        let prefix = messages::chat_key_prefix(chat_id);
+        for (key, value) in self.store.list(Namespace::Message)? {
+            if !key.starts_with(&prefix) {
+                continue;
+            }
+            let mut msg = messages::decode_message(&value)?;
+            if msg.client_msg_id != client_msg_id || !msg.outgoing {
+                continue;
+            }
+            if !messages::status_advances(msg.status, status) {
+                return Ok(false);
+            }
+            msg.status = status;
+            self.store
+                .put(Namespace::Message, &key, &messages::encode_message(&msg))?;
+            return Ok(true);
+        }
+        Ok(false)
     }
 
     /// The most recent message of every chat, newest chat first — enough to

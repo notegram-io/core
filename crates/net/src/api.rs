@@ -8,7 +8,7 @@ use tl::generated::{
     KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
     KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesEncryptedAcked, MessagesEncryptedBatch,
     MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesGetEncrypted, MessagesSendEncrypted,
-    OneTimePreKey, Ping, Pong, UpdateNewMessages,
+    OneTimePreKey, Ping, Pong, UpdateMessageDelivered, UpdateNewMessages,
 };
 
 use crate::error::Result;
@@ -136,16 +136,34 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
     /// replies, so they are picked up whenever any request runs — the keepalive
     /// ping alone is enough to surface them promptly.
     pub fn take_new_message_updates(&mut self) -> Vec<UpdateNewMessages> {
-        self.rpc_mut()
-            .take_updates()
-            .into_iter()
-            .filter_map(|raw| {
-                if raw.len() < 4 || wire::u32_le(&raw[0..4]) != UpdateNewMessages::CTOR {
-                    return None;
-                }
-                tl::decode_from::<UpdateNewMessages>(&raw, tl::Limits::default()).ok()
-            })
-            .collect()
+        self.take_updates_of::<UpdateNewMessages>()
+    }
+
+    /// Delivery receipts: a recipient device fetched and acked one of our
+    /// messages. Drained the same way as new-message notices.
+    pub fn take_delivery_updates(&mut self) -> Vec<UpdateMessageDelivered> {
+        self.take_updates_of::<UpdateMessageDelivered>()
+    }
+
+    /// Pulls out the buffered updates of one type, leaving the rest queued —
+    /// draining everything here would discard notices the caller has not asked
+    /// for yet.
+    fn take_updates_of<T: TlObject>(&mut self) -> Vec<T> {
+        let mut wanted = Vec::new();
+        let mut keep = Vec::new();
+        for raw in self.rpc_mut().take_updates() {
+            if raw.len() < 4 || wire::u32_le(&raw[0..4]) != T::CTOR {
+                keep.push(raw);
+                continue;
+            }
+            // A malformed notice is dropped: it is only a hint, and the message
+            // itself is still on the server.
+            if let Ok(update) = tl::decode_from::<T>(&raw, tl::Limits::default()) {
+                wanted.push(update);
+            }
+        }
+        self.rpc_mut().restore_updates(keep);
+        wanted
     }
 
     pub async fn ack_encrypted(&mut self, server_msg_id: &str) -> Result<MessagesEncryptedAcked> {

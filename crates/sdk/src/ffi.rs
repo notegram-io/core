@@ -2,7 +2,7 @@ use std::sync::Mutex;
 
 use crate::{
     Identity, InboundPreKeys, NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity,
-    RecipientPreKeyBundle, SdkError, StoredMessage,
+    MessageStatus, RecipientPreKeyBundle, SdkError, StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -141,6 +141,34 @@ pub struct FfiVerifiedPrekeyBundle {
     pub one_time_pre_key_pub: Option<Vec<u8>>,
 }
 
+/// How far an outgoing message got. Only ever moves forward.
+#[derive(uniffi::Enum, Clone, Copy)]
+pub enum FfiMessageStatus {
+    Sent,
+    Delivered,
+    Read,
+}
+
+impl From<MessageStatus> for FfiMessageStatus {
+    fn from(s: MessageStatus) -> Self {
+        match s {
+            MessageStatus::Sent => FfiMessageStatus::Sent,
+            MessageStatus::Delivered => FfiMessageStatus::Delivered,
+            MessageStatus::Read => FfiMessageStatus::Read,
+        }
+    }
+}
+
+impl From<FfiMessageStatus> for MessageStatus {
+    fn from(s: FfiMessageStatus) -> Self {
+        match s {
+            FfiMessageStatus::Sent => MessageStatus::Sent,
+            FfiMessageStatus::Delivered => MessageStatus::Delivered,
+            FfiMessageStatus::Read => MessageStatus::Read,
+        }
+    }
+}
+
 /// A message in local history. The server keeps only ciphertext and drops it on
 /// ack, so this is the durable copy of a conversation.
 #[derive(uniffi::Record)]
@@ -151,6 +179,8 @@ pub struct FfiStoredMessage {
     pub client_msg_id: String,
     pub text: String,
     pub created_at: i64,
+    /// Delivery state; always Sent for incoming messages.
+    pub status: FfiMessageStatus,
 }
 
 impl From<StoredMessage> for FfiStoredMessage {
@@ -162,6 +192,7 @@ impl From<StoredMessage> for FfiStoredMessage {
             client_msg_id: m.client_msg_id,
             text: m.text,
             created_at: m.created_at,
+            status: m.status.into(),
         }
     }
 }
@@ -175,6 +206,7 @@ impl From<FfiStoredMessage> for StoredMessage {
             client_msg_id: m.client_msg_id,
             text: m.text,
             created_at: m.created_at,
+            status: m.status.into(),
         }
     }
 }
@@ -420,6 +452,20 @@ impl NotegramCore {
 
     pub fn save_message(&self, message: FfiStoredMessage) -> Result<(), FfiError> {
         Ok(self.lock().save_message(&message.into())?)
+    }
+
+    /// Advances an outgoing message's delivery status, matched by the id the
+    /// sender chose. Status never regresses, so notices arriving out of order
+    /// are safe to apply. Returns whether anything changed.
+    pub fn mark_message_status(
+        &self,
+        chat_id: i64,
+        client_msg_id: String,
+        status: FfiMessageStatus,
+    ) -> Result<bool, FfiError> {
+        Ok(self
+            .lock()
+            .mark_message_status(chat_id, &client_msg_id, status.into())?)
     }
 
     /// Messages of one chat, oldest first. `limit` of 0 means no cap.

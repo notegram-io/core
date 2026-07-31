@@ -162,6 +162,16 @@ pub struct FfiNewMessageUpdate {
     pub pending_count: i32,
 }
 
+/// A server push saying one of our messages reached a recipient device.
+#[derive(uniffi::Record)]
+pub struct FfiDeliveryUpdate {
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    pub recipient_user_id: i64,
+    pub recipient_device_id: i64,
+    pub delivered_at: i64,
+}
+
 /// An encrypted message waiting for this device. Feed `header`, `ciphertext`
 /// and `associated_data` into `NotegramCore.decrypt_message`, then ack it by
 /// `server_msg_id` so the server stops redelivering it.
@@ -570,6 +580,25 @@ impl NetSession {
                 chat_id: u.chat_id,
                 sender_user_id: u.sender_user_id,
                 pending_count: u.pending_count,
+            })
+            .collect()
+    }
+
+    /// Delivery receipts pushed since the last call: a recipient device fetched
+    /// and acked one of our messages. Match them to local history by
+    /// `client_msg_id` and advance the status.
+    pub async fn take_delivery_updates(&self) -> Vec<FfiDeliveryUpdate> {
+        self.inner
+            .lock()
+            .await
+            .take_delivery_updates()
+            .into_iter()
+            .map(|u| FfiDeliveryUpdate {
+                chat_id: u.chat_id,
+                client_msg_id: u.client_msg_id,
+                recipient_user_id: u.recipient_user_id,
+                recipient_device_id: u.recipient_device_id,
+                delivered_at: u.delivered_at,
             })
             .collect()
     }

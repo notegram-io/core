@@ -39,6 +39,17 @@ impl<S> Rpc<S> {
         self.updates.drain(..).collect()
     }
 
+    /// Puts back updates a caller pulled out but did not consume, keeping
+    /// them available for whoever does want them.
+    pub fn restore_updates(&mut self, updates: Vec<Vec<u8>>) {
+        for raw in updates.into_iter().rev() {
+            if self.updates.len() >= MAX_BUFFERED_UPDATES {
+                break;
+            }
+            self.updates.push_front(raw);
+        }
+    }
+
     pub fn connection_mut(&mut self) -> &mut Connection<S> {
         &mut self.conn
     }

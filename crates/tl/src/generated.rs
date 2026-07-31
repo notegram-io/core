@@ -4562,6 +4562,50 @@ impl TlObject for SignalSessionBootstrapContract {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct UpdateMessageDelivered {
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    pub recipient_user_id: i64,
+    pub recipient_device_id: i64,
+    pub delivered_at: i64,
+}
+
+impl TlObject for UpdateMessageDelivered {
+    const CTOR: u32 = 0x4c8e17a5;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.chat_id);
+        e.string(&self.client_msg_id)?;
+        e.long(self.recipient_user_id);
+        e.long(self.recipient_device_id);
+        e.long(self.delivered_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
+        }
+        d.enter()?;
+        let chat_id = d.long()?;
+        let client_msg_id = d.string()?;
+        let recipient_user_id = d.long()?;
+        let recipient_device_id = d.long()?;
+        let delivered_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            chat_id,
+            client_msg_id,
+            recipient_user_id,
+            recipient_device_id,
+            delivered_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct UpdateNewMessages {
     pub chat_id: i64,
     pub sender_user_id: i64,
