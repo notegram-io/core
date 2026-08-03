@@ -29,7 +29,6 @@ uniffi = [
     "uniffi/tokio",
     "sqlite",
     "dep:net",
-    "dep:tl",
     "dep:kt",
     "dep:tokio",
     "dep:rustls",
@@ -42,7 +41,8 @@ e2ee = { path = "../e2ee" }
 ratchet = { path = "../ratchet" }
 store = { path = "../store" }
 net = { path = "../net", optional = true }
-tl = { path = "../tl", optional = true }
+tl = { path = "../tl" }
+wire = { path = "../wire" }
 kt = { path = "../kt", optional = true }
 rand_core = { version = "0.6", features = ["getrandom"] }
 uniffi = { version = "0.28", optional = true }

@@ -1,8 +1,9 @@
 use std::sync::Mutex;
 
 use crate::{
-    Identity, InboundPreKeys, NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity,
-    MessageStatus, RecipientPreKeyBundle, SdkError, StoredMessage,
+    message_ref as sdk_message_ref, Identity, InboundPreKeys, MessageBody, MessageStatus,
+    NotegramClient,
+    PeerAddress, PreKeyBundle, PublicIdentity, RecipientPreKeyBundle, SdkError, StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -14,6 +15,10 @@ pub enum FfiError {
     BadPrekeySignature,
     BadKeyMaterial,
     NoIdentity,
+
+    /// The sender named by the server is not the sender the message itself
+    /// authenticates. The message must not be shown.
+    MisattributedMessage,
 
     BadInput,
 
@@ -29,6 +34,9 @@ impl core::fmt::Display for FfiError {
             FfiError::BadPrekeySignature => write!(f, "notegram: signed prekey signature invalid"),
             FfiError::BadKeyMaterial => write!(f, "notegram: malformed key material"),
             FfiError::NoIdentity => write!(f, "notegram: no local identity"),
+            FfiError::MisattributedMessage => {
+                write!(f, "notegram: message does not match its claimed sender")
+            }
             FfiError::BadInput => write!(f, "notegram: argument had wrong length"),
             FfiError::UntrustedPeerBundleProof(w) => write!(f, "notegram: peer bundle proof rejected: {w}"),
         }
@@ -46,6 +54,7 @@ impl From<SdkError> for FfiError {
             SdkError::BadPrekeySignature => FfiError::BadPrekeySignature,
             SdkError::BadKeyMaterial => FfiError::BadKeyMaterial,
             SdkError::NoIdentity => FfiError::NoIdentity,
+            SdkError::MisattributedMessage => FfiError::MisattributedMessage,
         }
     }
 }
@@ -169,6 +178,49 @@ impl From<FfiMessageStatus> for MessageStatus {
     }
 }
 
+/// What a decrypted message contains. Read receipts ride inside the ciphertext
+/// like any other message, so the server never learns that a chat was read.
+#[derive(uniffi::Enum)]
+pub enum FfiMessageBody {
+    Text { text: String },
+    /// Everything up to this timestamp has been read by the peer.
+    ReadReceipt { up_to_created_at: i64 },
+}
+
+impl From<MessageBody> for FfiMessageBody {
+    fn from(b: MessageBody) -> Self {
+        match b {
+            MessageBody::Text(text) => FfiMessageBody::Text { text },
+            MessageBody::ReadReceipt { up_to_created_at } => {
+                FfiMessageBody::ReadReceipt { up_to_created_at }
+            }
+        }
+    }
+}
+
+impl From<FfiMessageBody> for MessageBody {
+    fn from(b: FfiMessageBody) -> Self {
+        match b {
+            FfiMessageBody::Text { text } => MessageBody::Text(text),
+            FfiMessageBody::ReadReceipt { up_to_created_at } => {
+                MessageBody::ReadReceipt { up_to_created_at }
+            }
+        }
+    }
+}
+
+/// A decrypted message together with the metadata its sender bound into the
+/// associated data — authenticated by the AEAD tag, unlike the copy the server
+/// sends alongside it in `FfiIncomingMessage`.
+#[derive(uniffi::Record)]
+pub struct FfiDecryptedMessage {
+    pub body: FfiMessageBody,
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    /// The `message_ref` of the message this one answers, if it is a reply.
+    pub reply_to: Option<i64>,
+}
+
 /// A message in local history. The server keeps only ciphertext and drops it on
 /// ack, so this is the durable copy of a conversation.
 #[derive(uniffi::Record)]
@@ -181,6 +233,9 @@ pub struct FfiStoredMessage {
     pub created_at: i64,
     /// Delivery state; always Sent for incoming messages.
     pub status: FfiMessageStatus,
+    /// Set when this message answers another one, holding that message's
+    /// `message_ref`. Null for an ordinary message.
+    pub reply_to: Option<i64>,
 }
 
 impl From<StoredMessage> for FfiStoredMessage {
@@ -193,6 +248,7 @@ impl From<StoredMessage> for FfiStoredMessage {
             text: m.text,
             created_at: m.created_at,
             status: m.status.into(),
+            reply_to: m.reply_to,
         }
     }
 }
@@ -207,6 +263,7 @@ impl From<FfiStoredMessage> for StoredMessage {
             text: m.text,
             created_at: m.created_at,
             status: m.status.into(),
+            reply_to: m.reply_to,
         }
     }
 }
@@ -468,6 +525,12 @@ impl NotegramCore {
             .mark_message_status(chat_id, &client_msg_id, status.into())?)
     }
 
+    /// Applies a peer's read receipt to our own messages in that chat. Returns
+    /// how many rows changed, so the caller only redraws when something did.
+    pub fn mark_read_up_to(&self, chat_id: i64, up_to_created_at: i64) -> Result<u32, FfiError> {
+        Ok(self.lock().mark_read_up_to(chat_id, up_to_created_at)?)
+    }
+
     /// Messages of one chat, oldest first. `limit` of 0 means no cap.
     pub fn list_messages(
         &self,
@@ -493,7 +556,8 @@ impl NotegramCore {
     }
 
     /// Opens an incoming message, establishing the inbound session first when
-    /// the envelope is a `signal-prekey.v1` handshake. Returns the plaintext.
+    /// the envelope is a `signal-prekey.v1` handshake. The returned metadata is
+    /// what the sender authenticated, not what the server claimed.
     pub fn decrypt_message(
         &self,
         peer: FfiPeerAddress,
@@ -501,14 +565,26 @@ impl NotegramCore {
         header: Vec<u8>,
         ciphertext: Vec<u8>,
         associated_data: Vec<u8>,
-    ) -> Result<Vec<u8>, FfiError> {
-        Ok(self.lock().decrypt_message(
+    ) -> Result<FfiDecryptedMessage, FfiError> {
+        let opened = self.lock().decrypt_message(
             peer.into(),
             &envelope_type,
             &header,
             &ciphertext,
             &associated_data,
-        )?)
+        )?;
+        Ok(FfiDecryptedMessage {
+            body: opened.body.into(),
+            chat_id: opened.chat_id,
+            client_msg_id: opened.client_msg_id,
+            reply_to: opened.reply_to,
+        })
+    }
+
+    /// The handle a reply points at, derived from the message's client id. Both
+    /// sides compute it the same way, so no id has to be exchanged.
+    pub fn message_ref(&self, client_msg_id: String) -> i64 {
+        sdk_message_ref(&client_msg_id)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -519,8 +595,9 @@ impl NotegramCore {
         peer: FfiPeerAddress,
         chat_id: i64,
         client_msg_id: String,
-        plaintext: Vec<u8>,
+        body: FfiMessageBody,
         new_session_bundle: Option<FfiRecipientPreKeyBundle>,
+        reply_to: Option<i64>,
     ) -> Result<FfiOutgoingEnvelope, FfiError> {
         let bundle = new_session_bundle
             .map(|b| -> Result<RecipientPreKeyBundle, FfiError> {
@@ -542,8 +619,9 @@ impl NotegramCore {
             peer.into(),
             chat_id,
             &client_msg_id,
-            &plaintext,
+            &body.into(),
             bundle.as_ref(),
+            reply_to,
         )?;
         Ok(FfiOutgoingEnvelope {
             envelope_type: env.envelope_type,

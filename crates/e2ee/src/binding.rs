@@ -176,6 +176,32 @@ pub fn build_envelope_header_v4(
     tl::encode_to_vec(&header).expect("envelope header v4 encodes")
 }
 
+/// What the sender bound into the associated data. AEAD verifies these bytes as
+/// part of decryption, so a recipient that has successfully decrypted knows the
+/// sender authored exactly this — unlike the plaintext copies of the same fields
+/// the server hands out alongside the envelope, which nothing authenticates.
+pub struct ParsedAssociatedData {
+    pub sender_user_id: i64,
+    pub sender_device_id: i64,
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    pub reply_to: Option<i64>,
+}
+
+/// Decodes associated data that has already been authenticated by a successful
+/// decryption. Returns `None` if it is not a v1 associated-data blob.
+pub fn parse_associated_data(associated_data: &[u8]) -> Option<ParsedAssociatedData> {
+    let ad: MessageAssociatedData =
+        tl::decode_from(associated_data, tl::Limits::default()).ok()?;
+    Some(ParsedAssociatedData {
+        sender_user_id: ad.sender_user_id,
+        sender_device_id: ad.sender_device_id,
+        chat_id: ad.chat_id,
+        client_msg_id: ad.client_msg_id,
+        reply_to: ad.reply_to,
+    })
+}
+
 /// The X3DH parameters a recipient needs to open a `signal-prekey.v1` envelope,
 /// read back out of the header's bootstrap contract.
 pub struct ParsedSignalBootstrap {

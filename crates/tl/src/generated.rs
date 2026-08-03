@@ -3248,6 +3248,62 @@ impl TlObject for MessageAssociatedData {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessageBodyReadReceipt {
+    pub up_to_created_at: i64,
+}
+
+impl TlObject for MessageBodyReadReceipt {
+    const CTOR: u32 = 0xe2ee000a;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.up_to_created_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
+        }
+        d.enter()?;
+        let up_to_created_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            up_to_created_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessageBodyText {
+    pub text: String,
+}
+
+impl TlObject for MessageBodyText {
+    const CTOR: u32 = 0xe2ee0009;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.string(&self.text)?;
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
+        }
+        d.enter()?;
+        let text = d.string()?;
+        d.leave();
+        Ok(Self {
+            text,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessageEnvelopeHeaderV2 {
     pub schema: String,
     pub suite: String,

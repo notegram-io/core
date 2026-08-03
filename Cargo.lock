@@ -885,6 +885,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "uniffi",
+ "wire",
 ]
 
 [[package]]

@@ -55,7 +55,34 @@ pub struct StoredMessage {
     pub text: String,
     pub created_at: i64,
     pub status: MessageStatus,
+    /// The message this one replies to, as a [`message_ref`]. Carried inside
+    /// the AEAD associated data, so neither the server nor a relay can retarget
+    /// a reply at a different message.
+    pub reply_to: Option<i64>,
 }
+
+/// Stable 64-bit handle for a message, derived from its `client_msg_id`.
+///
+/// The wire contract types a reply as `long`, but a message is identified by a
+/// string id both sides already agree on, so the handle is derived rather than
+/// assigned: sender and recipient compute the same value without another
+/// round-trip, and there is no server-issued id to be lied about.
+pub fn message_ref(client_msg_id: &str) -> i64 {
+    let digest = crypto::sha256(
+        [MESSAGE_REF_DOMAIN.as_bytes(), client_msg_id.as_bytes()]
+            .concat()
+            .as_slice(),
+    );
+    let mut raw = [0u8; 8];
+    raw.copy_from_slice(&digest[..8]);
+    // Kept non-negative so the value survives environments that treat a
+    // negative id as "absent" (and reads the same in logs on both sides).
+    ((u64::from_be_bytes(raw) >> 1) as i64).max(1)
+}
+
+/// Domain separation: this hash must never collide with another use of
+/// `client_msg_id` as an input.
+const MESSAGE_REF_DOMAIN: &str = "notegram:msgref:v1:";
 
 /// Store key: `chat_id | created_at | client_msg_id`, all big-endian so the
 /// backend's byte-ordered listing is already grouped by chat and chronological
@@ -83,7 +110,7 @@ pub(crate) fn chat_key_prefix(chat_id: i64) -> [u8; 8] {
 
 pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     let mut out = Vec::with_capacity(40 + msg.client_msg_id.len() + msg.text.len());
-    out.push(MESSAGE_FORMAT_V2);
+    out.push(MESSAGE_FORMAT_V3);
     out.extend_from_slice(&msg.chat_id.to_le_bytes());
     out.extend_from_slice(&msg.peer_user_id.to_le_bytes());
     out.push(u8::from(msg.outgoing));
@@ -91,6 +118,9 @@ pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     append_str(&mut out, &msg.client_msg_id);
     append_str(&mut out, &msg.text);
     out.push(msg.status.code());
+    // 0 is not a valid message ref (message_ref floors at 1), so it doubles as
+    // "not a reply" without a separate presence byte.
+    out.extend_from_slice(&msg.reply_to.unwrap_or(0).to_le_bytes());
     out
 }
 
@@ -99,7 +129,7 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     // v1 rows predate delivery status and are still on disk; they read back as
     // Sent rather than being discarded.
     let version = r.u8()?;
-    if version != MESSAGE_FORMAT_V1 && version != MESSAGE_FORMAT_V2 {
+    if !(MESSAGE_FORMAT_V1..=MESSAGE_FORMAT_V3).contains(&version) {
         return Err(SdkError::BadKeyMaterial);
     }
     let chat_id = r.i64()?;
@@ -113,6 +143,14 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     } else {
         MessageStatus::Sent
     };
+    let reply_to = if version >= MESSAGE_FORMAT_V3 {
+        match r.i64()? {
+            0 => None,
+            reference => Some(reference),
+        }
+    } else {
+        None
+    };
     Ok(StoredMessage {
         chat_id,
         peer_user_id,
@@ -121,11 +159,13 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
         text,
         created_at,
         status,
+        reply_to,
     })
 }
 
 const MESSAGE_FORMAT_V1: u8 = 1;
 const MESSAGE_FORMAT_V2: u8 = 2;
+const MESSAGE_FORMAT_V3: u8 = 3;
 
 fn append_str(out: &mut Vec<u8>, value: &str) {
     let bytes = value.as_bytes();
@@ -179,6 +219,7 @@ mod tests {
             text: "привет 👋".into(),
             created_at: 1_700_000_000_000,
             status: MessageStatus::Sent,
+            reply_to: None,
         }
     }
 
@@ -233,15 +274,47 @@ mod tests {
 
     #[test]
     fn rows_written_before_status_existed_still_load() {
-        // v1 layout: no trailing status byte.
+        // v1 layout: no status byte and no reply ref.
         let msg = sample();
         let mut v1 = encode_message(&msg);
-        v1.pop();
+        v1.truncate(v1.len() - 9);
         v1[0] = MESSAGE_FORMAT_V1;
 
         let decoded = decode_message(&v1).expect("v1 rows must remain readable");
         assert_eq!(decoded.text, msg.text);
         assert_eq!(decoded.status, MessageStatus::Sent);
+        assert_eq!(decoded.reply_to, None);
     }
 
+    #[test]
+    fn rows_written_before_replies_existed_still_load() {
+        // v2 layout: status byte, but no reply ref after it.
+        let mut msg = sample();
+        msg.status = MessageStatus::Delivered;
+        let mut v2 = encode_message(&msg);
+        v2.truncate(v2.len() - 8);
+        v2[0] = MESSAGE_FORMAT_V2;
+
+        let decoded = decode_message(&v2).expect("v2 rows must remain readable");
+        assert_eq!(decoded.status, MessageStatus::Delivered);
+        assert_eq!(decoded.reply_to, None);
+    }
+
+    #[test]
+    fn reply_ref_survives_a_roundtrip() {
+        let mut msg = sample();
+        msg.reply_to = Some(message_ref("parent-message"));
+        assert_eq!(decode_message(&encode_message(&msg)).unwrap(), msg);
+    }
+
+    #[test]
+    fn message_ref_is_stable_positive_and_id_specific() {
+        // Both sides derive the ref from the same client id, so it has to be a
+        // pure function of that id — and never 0, which encodes "no reply".
+        assert_eq!(message_ref("abc-123"), message_ref("abc-123"));
+        assert_ne!(message_ref("abc-123"), message_ref("abc-124"));
+        for id in ["", "abc-123", "у", &"x".repeat(512)] {
+            assert!(message_ref(id) > 0, "ref for {id:?} must be positive");
+        }
+    }
 }

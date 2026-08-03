@@ -2,6 +2,7 @@ use rand_core::{OsRng, RngCore};
 use ratchet::DoubleRatchet;
 use store::{Backend, Namespace, SecureStore};
 
+use crate::body::MessageBody;
 use crate::identity::{Identity, PublicIdentity};
 use crate::messages::{self, MessageStatus, StoredMessage};
 use crate::session::{
@@ -44,6 +45,21 @@ pub struct OutgoingEnvelope {
     pub header: Vec<u8>,
     pub ciphertext: Vec<u8>,
     pub associated_data: Vec<u8>,
+}
+
+/// An opened message plus the metadata the sender authenticated alongside it.
+///
+/// Everything here comes out of the associated data, which AEAD verified during
+/// decryption — not out of the plaintext fields the server sends beside the
+/// envelope, which it is free to lie about.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IncomingMessage {
+    pub body: MessageBody,
+    pub chat_id: i64,
+    pub client_msg_id: String,
+    /// Set when this message is a reply; matches [`crate::message_ref`] of the
+    /// message being answered.
+    pub reply_to: Option<i64>,
 }
 
 const IDENTITY_KEY: &[u8] = b"self";
@@ -292,8 +308,9 @@ impl<B: Backend> NotegramClient<B> {
         peer: PeerAddress,
         chat_id: i64,
         client_msg_id: &str,
-        plaintext: &[u8],
+        body: &MessageBody,
         new_session_bundle: Option<&RecipientPreKeyBundle>,
+        reply_to: Option<i64>,
     ) -> Result<OutgoingEnvelope> {
         let identity = self.load_identity()?;
         let is_new_session = !self.has_session(peer)?;
@@ -324,11 +341,14 @@ impl<B: Backend> NotegramClient<B> {
             chat_id,
             client_msg_id: client_msg_id.to_string(),
             forward_info: Vec::new(),
-            reply_to: None,
+            // Inside the associated data, so the AEAD tag covers it: a relay
+            // cannot retarget the reply at a different message without breaking
+            // decryption outright.
+            reply_to,
         };
         let associated_data = e2ee::build_associated_data_v1(&ad_input);
 
-        let ciphertext = self.encrypt(peer, plaintext, &associated_data)?;
+        let ciphertext = self.encrypt(peer, &body.encode(), &associated_data)?;
 
         let mut message_nonce = [0u8; MESSAGE_NONCE_LEN];
         OsRng.fill_bytes(&mut message_nonce);
@@ -389,7 +409,36 @@ impl<B: Backend> NotegramClient<B> {
     /// using the private prekeys named there from the local store, then
     /// decrypts. The consumed one-time prekey is deleted afterwards: reusing it
     /// would break forward secrecy.
+    ///
+    /// The returned metadata is read back out of the associated data, which
+    /// decryption has just authenticated, and is checked against the sender the
+    /// server named — so a server that re-attributes someone else's ciphertext
+    /// is rejected rather than displayed under the wrong name.
     pub fn decrypt_message(
+        &mut self,
+        peer: PeerAddress,
+        envelope_type: &str,
+        header: &[u8],
+        ciphertext: &[u8],
+        associated_data: &[u8],
+    ) -> Result<IncomingMessage> {
+        let plaintext = self.open_envelope(peer, envelope_type, header, ciphertext, associated_data)?;
+        let body = MessageBody::decode(&plaintext);
+
+        let ad = e2ee::parse_associated_data(associated_data)
+            .ok_or(SdkError::MisattributedMessage)?;
+        if ad.sender_user_id != peer.user_id || ad.sender_device_id != peer.device_id {
+            return Err(SdkError::MisattributedMessage);
+        }
+        Ok(IncomingMessage {
+            body,
+            chat_id: ad.chat_id,
+            client_msg_id: ad.client_msg_id,
+            reply_to: ad.reply_to,
+        })
+    }
+
+    fn open_envelope(
         &mut self,
         peer: PeerAddress,
         envelope_type: &str,
@@ -525,6 +574,34 @@ impl<B: Backend> NotegramClient<B> {
             return Ok(true);
         }
         Ok(false)
+    }
+
+    /// Applies a read receipt: every message we sent in this chat at or before
+    /// `up_to_created_at` becomes `Read`. Returns how many rows changed.
+    ///
+    /// A watermark rather than a list of ids, so one receipt settles a whole
+    /// backlog and re-delivering the same receipt changes nothing — the
+    /// forward-only status guard makes it idempotent.
+    pub fn mark_read_up_to(&mut self, chat_id: i64, up_to_created_at: i64) -> Result<u32> {
+        let prefix = messages::chat_key_prefix(chat_id);
+        let mut changed = 0;
+        for (key, value) in self.store.list(Namespace::Message)? {
+            if !key.starts_with(&prefix) {
+                continue;
+            }
+            let mut msg = messages::decode_message(&value)?;
+            if !msg.outgoing || msg.created_at > up_to_created_at {
+                continue;
+            }
+            if !messages::status_advances(msg.status, MessageStatus::Read) {
+                continue;
+            }
+            msg.status = MessageStatus::Read;
+            self.store
+                .put(Namespace::Message, &key, &messages::encode_message(&msg))?;
+            changed += 1;
+        }
+        Ok(changed)
     }
 
     /// The most recent message of every chat, newest chat first — enough to
