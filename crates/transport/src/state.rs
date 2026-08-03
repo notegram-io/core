@@ -47,14 +47,22 @@ impl SecureState {
         s
     }
 
+    /// Message ids must increase for the whole life of a connection: the server
+    /// rejects one that does not as a replay and tears the session down.
+    ///
+    /// The clock alone cannot be trusted for that. A device clock steps
+    /// backwards — NTP correction, resume from sleep, an emulator catching up —
+    /// and a naive `now_ms` would then emit a lower id and kill a working link.
+    /// So the timestamp only ever moves forward, and a stalled or reversed clock
+    /// falls back to the counter.
     pub fn next_msg_id(&mut self, now_ms: i64) -> u64 {
-        if now_ms == self.last_ms {
-            self.msg_ctr = (self.msg_ctr + 1) & ((1 << 20) - 1);
-        } else {
-            self.msg_ctr = 0;
+        if now_ms > self.last_ms {
             self.last_ms = now_ms;
+            self.msg_ctr = 0;
+        } else {
+            self.msg_ctr = (self.msg_ctr + 1) & ((1 << 20) - 1);
         }
-        ((now_ms as u64) << 20) | self.msg_ctr
+        ((self.last_ms as u64) << 20) | self.msg_ctr
     }
 }
 
@@ -80,6 +88,26 @@ mod tests {
         let c = s.next_msg_id(1001);
         assert_eq!(c >> 20, 1001);
         assert_eq!(c & 0xFFFFF, 0, "counter resets on a new millisecond");
+    }
+
+    #[test]
+    fn msg_id_survives_a_clock_that_steps_backwards() {
+        // NTP correction, waking from sleep, an emulator catching up: the clock
+        // goes back and a lower id would be rejected as a replay, killing a
+        // link that is otherwise healthy.
+        let mut s = SecureState::new_client(1);
+        let before = s.next_msg_id(5_000);
+        let after = s.next_msg_id(4_000);
+        assert!(after > before, "id went backwards with the clock");
+
+        // And keeps climbing while the clock stays behind.
+        let later = s.next_msg_id(4_500);
+        assert!(later > after);
+
+        // Once the clock passes the high-water mark, timestamps resume.
+        let caught_up = s.next_msg_id(6_000);
+        assert_eq!(caught_up >> 20, 6_000);
+        assert!(caught_up > later);
     }
 
     #[test]
