@@ -6,8 +6,8 @@
 //! covers. Nothing about read state ever reaches the server in the clear, which
 //! is why receipts are not modelled the way delivery notices are.
 
-use tl::TlObject;
 use tl::generated::{MessageBodyReadReceipt, MessageBodyText};
+use tl::TlObject;
 
 /// A decrypted payload.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +16,9 @@ pub enum MessageBody {
     /// Everything the sender wrote in this chat up to and including this
     /// timestamp has been read. A watermark rather than a per-message id, so one
     /// receipt covers a backlog and receipts are idempotent.
-    ReadReceipt { up_to_created_at: i64 },
+    ReadReceipt {
+        up_to_created_at: i64,
+    },
 }
 
 impl MessageBody {
@@ -74,7 +76,9 @@ mod tests {
         let text = MessageBody::Text("привет 👋".into());
         assert_eq!(MessageBody::decode(&text.encode()), text);
 
-        let receipt = MessageBody::ReadReceipt { up_to_created_at: 1_700_000_000_000 };
+        let receipt = MessageBody::ReadReceipt {
+            up_to_created_at: 1_700_000_000_000,
+        };
         assert_eq!(MessageBody::decode(&receipt.encode()), receipt);
     }
 
@@ -82,7 +86,9 @@ mod tests {
     fn a_receipt_is_not_mistaken_for_text() {
         // The two bodies must stay distinguishable byte-wise, or a receipt would
         // render as a garbled message in the transcript.
-        let receipt = MessageBody::ReadReceipt { up_to_created_at: 42 };
+        let receipt = MessageBody::ReadReceipt {
+            up_to_created_at: 42,
+        };
         assert!(matches!(
             MessageBody::decode(&receipt.encode()),
             MessageBody::ReadReceipt { .. }

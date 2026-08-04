@@ -31,6 +31,13 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -732,6 +739,76 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -751,6 +828,54 @@ internal interface UniffiLib : Library {
         }
     }
 
+    fun uniffi_sdk_fn_clone_netsession(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Pointer
+    fun uniffi_sdk_fn_free_netsession(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_sdk_fn_constructor_netsession_connect(`edgeAddr`: RustBuffer.ByValue,`routeDc`: Int,
+    ): Long
+    fun uniffi_sdk_fn_constructor_netsession_resume(`edgeAddr`: RustBuffer.ByValue,`routeDc`: Int,`authKey`: RustBuffer.ByValue,`authKeyId`: Long,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_ack_encrypted(`ptr`: Pointer,`serverMsgId`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_authenticate(`ptr`: Pointer,`verified`: RustBuffer.ByValue,`clientInfo`: RustBuffer.ByValue,`serverEdPub`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_claim_username(`ptr`: Pointer,`name`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_devices(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_encrypted_messages(`ptr`: Pointer,`limit`: Int,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_my_profile(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_my_username(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_peer_bundle(`ptr`: Pointer,`userId`: Long,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_get_profile(`ptr`: Pointer,`userId`: Long,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_keys_status(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_keys_upload(`ptr`: Pointer,`bundle`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_ping(`ptr`: Pointer,`pingId`: Long,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_resolve_username(`ptr`: Pointer,`name`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_send_email_code(`ptr`: Pointer,`email`: RustBuffer.ByValue,`purpose`: RustBuffer.ByValue,`deviceId`: Long,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_send_encrypted(`ptr`: Pointer,`clientMsgId`: RustBuffer.ByValue,`chatId`: Long,`schema`: RustBuffer.ByValue,`suite`: RustBuffer.ByValue,`recipients`: RustBuffer.ByValue,`associatedData`: RustBuffer.ByValue,`forwardInfo`: RustBuffer.ByValue,`replyTo`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_set_device_signing_key(`ptr`: Pointer,`publicKey`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_set_profile(`ptr`: Pointer,`displayName`: RustBuffer.ByValue,`bio`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_take_delivery_updates(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_take_new_message_updates(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_verify_email_code(`ptr`: Pointer,`email`: RustBuffer.ByValue,`emailHash`: RustBuffer.ByValue,`code`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_sdk_fn_clone_notegramcore(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
     ): Pointer
     fun uniffi_sdk_fn_free_notegramcore(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
@@ -761,17 +886,41 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_decrypt(`ptr`: Pointer,`peer`: RustBuffer.ByValue,`message`: RustBuffer.ByValue,`associatedData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_decrypt_message(`ptr`: Pointer,`peer`: RustBuffer.ByValue,`envelopeType`: RustBuffer.ByValue,`header`: RustBuffer.ByValue,`ciphertext`: RustBuffer.ByValue,`associatedData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_encrypt(`ptr`: Pointer,`peer`: RustBuffer.ByValue,`plaintext`: RustBuffer.ByValue,`associatedData`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_encrypt_message(`ptr`: Pointer,`senderUserId`: Long,`senderDeviceId`: Long,`peer`: RustBuffer.ByValue,`chatId`: Long,`clientMsgId`: RustBuffer.ByValue,`body`: RustBuffer.ByValue,`newSessionBundle`: RustBuffer.ByValue,`replyTo`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_establish_inbound_session(`ptr`: Pointer,`peer`: RustBuffer.ByValue,`signedPrekeyPriv`: RustBuffer.ByValue,`oneTimePrekeyPriv`: RustBuffer.ByValue,`initiatorIdentityPub`: RustBuffer.ByValue,`initiatorEphemeralPub`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     fun uniffi_sdk_fn_method_notegramcore_establish_outbound_session(`ptr`: Pointer,`peer`: RustBuffer.ByValue,`bundle`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_generate_prekey_bundle(`ptr`: Pointer,`oneTimeCount`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_has_session(`ptr`: Pointer,`peer`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Byte
     fun uniffi_sdk_fn_method_notegramcore_import_identity(`ptr`: Pointer,`identityPriv`: RustBuffer.ByValue,`signingSeed`: RustBuffer.ByValue,`registrationId`: Int,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_list_chat_previews(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_list_messages(`ptr`: Pointer,`chatId`: Long,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_mark_message_status(`ptr`: Pointer,`chatId`: Long,`clientMsgId`: RustBuffer.ByValue,`status`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    fun uniffi_sdk_fn_method_notegramcore_mark_read_up_to(`ptr`: Pointer,`chatId`: Long,`upToCreatedAt`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Int
+    fun uniffi_sdk_fn_method_notegramcore_message_ref(`ptr`: Pointer,`clientMsgId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    fun uniffi_sdk_fn_method_notegramcore_prekey_top_up(`ptr`: Pointer,`count`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_public_identity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_rotate_signed_prekey(`ptr`: Pointer,`oneTimeCount`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    fun uniffi_sdk_fn_method_notegramcore_save_message(`ptr`: Pointer,`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    fun uniffi_sdk_fn_method_notegramcore_verify_peer_bundle(`ptr`: Pointer,`proof`: RustBuffer.ByValue,`trust`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_sdk_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -885,21 +1034,89 @@ internal interface UniffiLib : Library {
     ): Unit
     fun ffi_sdk_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_sdk_checksum_method_netsession_ack_encrypted(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_authenticate(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_claim_username(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_devices(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_encrypted_messages(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_my_profile(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_my_username(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_peer_bundle(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_get_profile(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_keys_status(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_keys_upload(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_ping(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_resolve_username(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_send_email_code(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_send_encrypted(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_set_device_signing_key(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_set_profile(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_take_delivery_updates(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_take_new_message_updates(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_verify_email_code(
+    ): Short
     fun uniffi_sdk_checksum_method_notegramcore_create_identity(
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_decrypt(
     ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_decrypt_message(
+    ): Short
     fun uniffi_sdk_checksum_method_notegramcore_encrypt(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_encrypt_message(
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_establish_inbound_session(
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_establish_outbound_session(
     ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_generate_prekey_bundle(
+    ): Short
     fun uniffi_sdk_checksum_method_notegramcore_has_session(
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_import_identity(
     ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_list_chat_previews(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_list_messages(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_mark_message_status(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_mark_read_up_to(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_message_ref(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_prekey_top_up(
+    ): Short
     fun uniffi_sdk_checksum_method_notegramcore_public_identity(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_rotate_signed_prekey(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_save_message(
+    ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle(
+    ): Short
+    fun uniffi_sdk_checksum_constructor_netsession_connect(
+    ): Short
+    fun uniffi_sdk_checksum_constructor_netsession_resume(
     ): Short
     fun uniffi_sdk_checksum_constructor_notegramcore_open(
     ): Short
@@ -920,13 +1137,79 @@ private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
 
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: UniffiLib) {
+    if (lib.uniffi_sdk_checksum_method_netsession_ack_encrypted() != 52183.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_authenticate() != 22741.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_claim_username() != 21753.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_devices() != 18671.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_encrypted_messages() != 43550.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_my_profile() != 44046.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_my_username() != 20889.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_peer_bundle() != 22648.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_get_profile() != 8434.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_keys_status() != 32495.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_keys_upload() != 6244.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_ping() != 28737.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_resolve_username() != 40945.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_send_email_code() != 46418.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_send_encrypted() != 27646.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_set_device_signing_key() != 55423.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_set_profile() != 8032.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_take_delivery_updates() != 42772.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_take_new_message_updates() != 16538.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_verify_email_code() != 28563.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_sdk_checksum_method_notegramcore_create_identity() != 64928.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_notegramcore_decrypt() != 60904.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_decrypt_message() != 56172.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_sdk_checksum_method_notegramcore_encrypt() != 21142.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_encrypt_message() != 30320.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_notegramcore_establish_inbound_session() != 34263.toShort()) {
@@ -935,13 +1218,49 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_sdk_checksum_method_notegramcore_establish_outbound_session() != 49654.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_generate_prekey_bundle() != 40708.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_sdk_checksum_method_notegramcore_has_session() != 34586.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_notegramcore_import_identity() != 17143.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_list_chat_previews() != 47053.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_list_messages() != 43068.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_mark_message_status() != 53255.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_mark_read_up_to() != 46742.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_message_ref() != 45993.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_prekey_top_up() != 20215.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_sdk_checksum_method_notegramcore_public_identity() != 29040.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_rotate_signed_prekey() != 65069.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_save_message() != 52248.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle() != 27541.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_constructor_netsession_connect() != 14826.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_constructor_netsession_resume() != 36717.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_constructor_notegramcore_open() != 19205.toShort()) {
@@ -950,6 +1269,46 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
 }
 
 // Async support
+// Async return type handlers
+
+internal const val UNIFFI_RUST_FUTURE_POLL_READY = 0.toByte()
+internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
+
+internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
+
+// FFI type for Rust future continuations
+internal object uniffiRustFutureContinuationCallbackImpl: UniffiRustFutureContinuationCallback {
+    override fun callback(data: Long, pollResult: Byte) {
+        uniffiContinuationHandleMap.remove(data).resume(pollResult)
+    }
+}
+
+internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
+    rustFuture: Long,
+    pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
+    completeFunc: (Long, UniffiRustCallStatus) -> F,
+    freeFunc: (Long) -> Unit,
+    liftFunc: (F) -> T,
+    errorHandler: UniffiRustCallStatusErrorHandler<E>
+): T {
+    try {
+        do {
+            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
+                pollFunc(
+                    rustFuture,
+                    uniffiRustFutureContinuationCallbackImpl,
+                    uniffiContinuationHandleMap.insert(continuation)
+                )
+            }
+        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
+
+        return liftFunc(
+            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
+        )
+    } finally {
+        freeFunc(rustFuture)
+    }
+}
 
 // Public interface members begin here.
 
@@ -1014,6 +1373,52 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 
     override fun write(value: UInt, buf: ByteBuffer) {
         buf.putInt(value.toInt())
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterInt: FfiConverter<Int, Int> {
+    override fun lift(value: Int): Int {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Int {
+        return buf.getInt()
+    }
+
+    override fun lower(value: Int): Int {
+        return value
+    }
+
+    override fun allocationSize(value: Int) = 4UL
+
+    override fun write(value: Int, buf: ByteBuffer) {
+        buf.putInt(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterULong: FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong {
+        return value.toULong()
+    }
+
+    override fun read(buf: ByteBuffer): ULong {
+        return lift(buf.getLong())
+    }
+
+    override fun lower(value: ULong): Long {
+        return value.toLong()
+    }
+
+    override fun allocationSize(value: ULong) = 8UL
+
+    override fun write(value: ULong, buf: ByteBuffer) {
+        buf.putLong(value.toLong())
     }
 }
 
@@ -1301,23 +1706,834 @@ private class JavaLangRefCleanable(
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
 }
+public interface NetSessionInterface {
+    
+    suspend fun `ackEncrypted`(`serverMsgId`: kotlin.String): kotlin.Boolean
+    
+    suspend fun `authenticate`(`verified`: FfiVerified, `clientInfo`: kotlin.ByteArray, `serverEdPub`: kotlin.ByteArray): FfiAuthKeys
+    
+    suspend fun `claimUsername`(`name`: kotlin.String): kotlin.String
+    
+    suspend fun `getDevices`(): List<FfiDevice>
+    
+    suspend fun `getEncryptedMessages`(`limit`: kotlin.Int): List<FfiIncomingMessage>
+    
+    suspend fun `getMyProfile`(): FfiProfile
+    
+    suspend fun `getMyUsername`(): kotlin.String
+    
+    suspend fun `getPeerBundle`(`userId`: kotlin.Long): List<FfiPeerDevice>
+    
+    suspend fun `getProfile`(`userId`: kotlin.Long): FfiProfile
+    
+    suspend fun `keysStatus`(): FfiKeysStatus
+    
+    suspend fun `keysUpload`(`bundle`: FfiPrekeyUpload): kotlin.Long
+    
+    suspend fun `ping`(`pingId`: kotlin.Long): kotlin.Long
+    
+    suspend fun `resolveUsername`(`name`: kotlin.String): FfiResolved
+    
+    suspend fun `sendEmailCode`(`email`: kotlin.String, `purpose`: kotlin.String, `deviceId`: kotlin.Long): FfiSentCode
+    
+    suspend fun `sendEncrypted`(`clientMsgId`: kotlin.String, `chatId`: kotlin.Long, `schema`: kotlin.String, `suite`: kotlin.String, `recipients`: List<FfiEncryptedRecipient>, `associatedData`: kotlin.ByteArray, `forwardInfo`: kotlin.ByteArray?, `replyTo`: kotlin.Long?): FfiEncryptedSent
+    
+    suspend fun `setDeviceSigningKey`(`publicKey`: kotlin.ByteArray): kotlin.Long
+    
+    suspend fun `setProfile`(`displayName`: kotlin.String, `bio`: kotlin.String): FfiProfile
+    
+    /**
+     * Delivery receipts pushed since the last call: a recipient device fetched
+     * and acked one of our messages. Match them to local history by
+     * `client_msg_id` and advance the status.
+     */
+    suspend fun `takeDeliveryUpdates`(): List<FfiDeliveryUpdate>
+    
+    /**
+     * New-message notices the server pushed since the last call. They arrive
+     * on the same connection as RPC replies, so any request — the keepalive
+     * ping included — surfaces them; this call itself does no I/O.
+     *
+     * A notice is a hint, not delivery: fetch with `get_encrypted_messages`
+     * after one. Missing a notice only delays the fetch, since the ciphertext
+     * stays on the server until acked.
+     */
+    suspend fun `takeNewMessageUpdates`(): List<FfiNewMessageUpdate>
+    
+    suspend fun `verifyEmailCode`(`email`: kotlin.String, `emailHash`: kotlin.ByteArray, `code`: kotlin.String): FfiVerified
+    
+    companion object
+}
+
+open class NetSession: Disposable, AutoCloseable, NetSessionInterface {
+
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the pointer being freed concurrently.
+        try {
+            return block(this.uniffiClonePointer())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.uniffi_sdk_fn_free_netsession(ptr, status)
+                }
+            }
+        }
+    }
+
+    fun uniffiClonePointer(): Pointer {
+        return uniffiRustCall() { status ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_clone_netsession(pointer!!, status)
+        }
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `ackEncrypted`(`serverMsgId`: kotlin.String) : kotlin.Boolean {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_ack_encrypted(
+                thisPtr,
+                FfiConverterString.lower(`serverMsgId`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_i8(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_i8(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_i8(future) },
+        // lift function
+        { FfiConverterBoolean.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `authenticate`(`verified`: FfiVerified, `clientInfo`: kotlin.ByteArray, `serverEdPub`: kotlin.ByteArray) : FfiAuthKeys {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_authenticate(
+                thisPtr,
+                FfiConverterTypeFfiVerified.lower(`verified`),FfiConverterByteArray.lower(`clientInfo`),FfiConverterByteArray.lower(`serverEdPub`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiAuthKeys.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `claimUsername`(`name`: kotlin.String) : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_claim_username(
+                thisPtr,
+                FfiConverterString.lower(`name`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getDevices`() : List<FfiDevice> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_devices(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceTypeFfiDevice.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getEncryptedMessages`(`limit`: kotlin.Int) : List<FfiIncomingMessage> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_encrypted_messages(
+                thisPtr,
+                FfiConverterInt.lower(`limit`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceTypeFfiIncomingMessage.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getMyProfile`() : FfiProfile {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_my_profile(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiProfile.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getMyUsername`() : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_my_username(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getPeerBundle`(`userId`: kotlin.Long) : List<FfiPeerDevice> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_peer_bundle(
+                thisPtr,
+                FfiConverterLong.lower(`userId`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceTypeFfiPeerDevice.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `getProfile`(`userId`: kotlin.Long) : FfiProfile {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_get_profile(
+                thisPtr,
+                FfiConverterLong.lower(`userId`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiProfile.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `keysStatus`() : FfiKeysStatus {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_keys_status(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiKeysStatus.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `keysUpload`(`bundle`: FfiPrekeyUpload) : kotlin.Long {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_keys_upload(
+                thisPtr,
+                FfiConverterTypeFfiPrekeyUpload.lower(`bundle`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_i64(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_i64(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_i64(future) },
+        // lift function
+        { FfiConverterLong.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `ping`(`pingId`: kotlin.Long) : kotlin.Long {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_ping(
+                thisPtr,
+                FfiConverterLong.lower(`pingId`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_i64(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_i64(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_i64(future) },
+        // lift function
+        { FfiConverterLong.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `resolveUsername`(`name`: kotlin.String) : FfiResolved {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_resolve_username(
+                thisPtr,
+                FfiConverterString.lower(`name`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiResolved.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `sendEmailCode`(`email`: kotlin.String, `purpose`: kotlin.String, `deviceId`: kotlin.Long) : FfiSentCode {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_send_email_code(
+                thisPtr,
+                FfiConverterString.lower(`email`),FfiConverterString.lower(`purpose`),FfiConverterLong.lower(`deviceId`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiSentCode.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `sendEncrypted`(`clientMsgId`: kotlin.String, `chatId`: kotlin.Long, `schema`: kotlin.String, `suite`: kotlin.String, `recipients`: List<FfiEncryptedRecipient>, `associatedData`: kotlin.ByteArray, `forwardInfo`: kotlin.ByteArray?, `replyTo`: kotlin.Long?) : FfiEncryptedSent {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_send_encrypted(
+                thisPtr,
+                FfiConverterString.lower(`clientMsgId`),FfiConverterLong.lower(`chatId`),FfiConverterString.lower(`schema`),FfiConverterString.lower(`suite`),FfiConverterSequenceTypeFfiEncryptedRecipient.lower(`recipients`),FfiConverterByteArray.lower(`associatedData`),FfiConverterOptionalByteArray.lower(`forwardInfo`),FfiConverterOptionalLong.lower(`replyTo`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiEncryptedSent.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `setDeviceSigningKey`(`publicKey`: kotlin.ByteArray) : kotlin.Long {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_set_device_signing_key(
+                thisPtr,
+                FfiConverterByteArray.lower(`publicKey`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_i64(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_i64(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_i64(future) },
+        // lift function
+        { FfiConverterLong.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `setProfile`(`displayName`: kotlin.String, `bio`: kotlin.String) : FfiProfile {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_set_profile(
+                thisPtr,
+                FfiConverterString.lower(`displayName`),FfiConverterString.lower(`bio`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiProfile.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    /**
+     * Delivery receipts pushed since the last call: a recipient device fetched
+     * and acked one of our messages. Match them to local history by
+     * `client_msg_id` and advance the status.
+     */
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `takeDeliveryUpdates`() : List<FfiDeliveryUpdate> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_take_delivery_updates(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceTypeFfiDeliveryUpdate.lift(it) },
+        // Error FFI converter
+        UniffiNullRustCallStatusErrorHandler,
+    )
+    }
+
+    
+    /**
+     * New-message notices the server pushed since the last call. They arrive
+     * on the same connection as RPC replies, so any request — the keepalive
+     * ping included — surfaces them; this call itself does no I/O.
+     *
+     * A notice is a hint, not delivery: fetch with `get_encrypted_messages`
+     * after one. Missing a notice only delays the fetch, since the ciphertext
+     * stays on the server until acked.
+     */
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `takeNewMessageUpdates`() : List<FfiNewMessageUpdate> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_take_new_message_updates(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceTypeFfiNewMessageUpdate.lift(it) },
+        // Error FFI converter
+        UniffiNullRustCallStatusErrorHandler,
+    )
+    }
+
+    
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `verifyEmailCode`(`email`: kotlin.String, `emailHash`: kotlin.ByteArray, `code`: kotlin.String) : FfiVerified {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_verify_email_code(
+                thisPtr,
+                FfiConverterString.lower(`email`),FfiConverterByteArray.lower(`emailHash`),FfiConverterString.lower(`code`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiVerified.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+
+    
+    companion object {
+        
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+     suspend fun `connect`(`edgeAddr`: kotlin.String, `routeDc`: kotlin.UInt) : NetSession {
+        return uniffiRustCallAsync(
+        UniffiLib.INSTANCE.uniffi_sdk_fn_constructor_netsession_connect(FfiConverterString.lower(`edgeAddr`),FfiConverterUInt.lower(`routeDc`),),
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_pointer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_pointer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_pointer(future) },
+        // lift function
+        { FfiConverterTypeNetSession.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+        
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+     suspend fun `resume`(`edgeAddr`: kotlin.String, `routeDc`: kotlin.UInt, `authKey`: kotlin.ByteArray, `authKeyId`: kotlin.ULong) : NetSession {
+        return uniffiRustCallAsync(
+        UniffiLib.INSTANCE.uniffi_sdk_fn_constructor_netsession_resume(FfiConverterString.lower(`edgeAddr`),FfiConverterUInt.lower(`routeDc`),FfiConverterByteArray.lower(`authKey`),FfiConverterULong.lower(`authKeyId`),),
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_pointer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_pointer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_pointer(future) },
+        // lift function
+        { FfiConverterTypeNetSession.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+        
+    }
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeNetSession: FfiConverter<NetSession, Pointer> {
+
+    override fun lower(value: NetSession): Pointer {
+        return value.uniffiClonePointer()
+    }
+
+    override fun lift(value: Pointer): NetSession {
+        return NetSession(value)
+    }
+
+    override fun read(buf: ByteBuffer): NetSession {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(Pointer(buf.getLong()))
+    }
+
+    override fun allocationSize(value: NetSession) = 8UL
+
+    override fun write(value: NetSession, buf: ByteBuffer) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
+// to the live Rust struct on the other side of the FFI.
+//
+// Each instance implements core operations for working with the Rust `Arc<T>` and the
+// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque pointer to the underlying Rust struct.
+//     Method calls need to read this pointer from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its pointer should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the pointer, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
+//      before it can pass the pointer over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
 public interface NotegramCoreInterface {
     
     fun `createIdentity`(): FfiPublicIdentity
     
     fun `decrypt`(`peer`: FfiPeerAddress, `message`: kotlin.ByteArray, `associatedData`: kotlin.ByteArray): kotlin.ByteArray
     
+    /**
+     * Opens an incoming message, establishing the inbound session first when
+     * the envelope is a `signal-prekey.v1` handshake. The returned metadata is
+     * what the sender authenticated, not what the server claimed.
+     */
+    fun `decryptMessage`(`peer`: FfiPeerAddress, `envelopeType`: kotlin.String, `header`: kotlin.ByteArray, `ciphertext`: kotlin.ByteArray, `associatedData`: kotlin.ByteArray): FfiDecryptedMessage
+    
     fun `encrypt`(`peer`: FfiPeerAddress, `plaintext`: kotlin.ByteArray, `associatedData`: kotlin.ByteArray): kotlin.ByteArray
+    
+    fun `encryptMessage`(`senderUserId`: kotlin.Long, `senderDeviceId`: kotlin.Long, `peer`: FfiPeerAddress, `chatId`: kotlin.Long, `clientMsgId`: kotlin.String, `body`: FfiMessageBody, `newSessionBundle`: FfiRecipientPreKeyBundle?, `replyTo`: kotlin.Long?): FfiOutgoingEnvelope
     
     fun `establishInboundSession`(`peer`: FfiPeerAddress, `signedPrekeyPriv`: kotlin.ByteArray, `oneTimePrekeyPriv`: kotlin.ByteArray?, `initiatorIdentityPub`: kotlin.ByteArray, `initiatorEphemeralPub`: kotlin.ByteArray)
     
     fun `establishOutboundSession`(`peer`: FfiPeerAddress, `bundle`: FfiPreKeyBundle): kotlin.ByteArray
     
+    fun `generatePrekeyBundle`(`oneTimeCount`: kotlin.UInt): FfiPrekeyUpload
+    
     fun `hasSession`(`peer`: FfiPeerAddress): kotlin.Boolean
     
     fun `importIdentity`(`identityPriv`: kotlin.ByteArray, `signingSeed`: kotlin.ByteArray, `registrationId`: kotlin.UInt): FfiPublicIdentity
     
+    /**
+     * Latest message per chat, newest chat first — for the chat list.
+     */
+    fun `listChatPreviews`(): List<FfiStoredMessage>
+    
+    /**
+     * Messages of one chat, oldest first. `limit` of 0 means no cap.
+     */
+    fun `listMessages`(`chatId`: kotlin.Long, `limit`: kotlin.UInt): List<FfiStoredMessage>
+    
+    /**
+     * Advances an outgoing message's delivery status, matched by the id the
+     * sender chose. Status never regresses, so notices arriving out of order
+     * are safe to apply. Returns whether anything changed.
+     */
+    fun `markMessageStatus`(`chatId`: kotlin.Long, `clientMsgId`: kotlin.String, `status`: FfiMessageStatus): kotlin.Boolean
+    
+    /**
+     * Applies a peer's read receipt to our own messages in that chat. Returns
+     * how many rows changed, so the caller only redraws when something did.
+     */
+    fun `markReadUpTo`(`chatId`: kotlin.Long, `upToCreatedAt`: kotlin.Long): kotlin.UInt
+    
+    /**
+     * The handle a reply points at, derived from the message's client id. Both
+     * sides compute it the same way, so no id has to be exchanged.
+     */
+    fun `messageRef`(`clientMsgId`: kotlin.String): kotlin.Long
+    
+    /**
+     * Builds an upload that adds `count` fresh one-time prekeys when the
+     * server reports the device is running low. Pass the result straight to
+     * `NetSession.keys_upload`: it repeats the existing identity and signed
+     * prekey unchanged (the server rejects a changed one under the same id)
+     * and only the one-time keys are new, with ids continuing the sequence so
+     * nothing the server still advertises is invalidated.
+     */
+    fun `prekeyTopUp`(`count`: kotlin.UInt): FfiPrekeyUpload
+    
     fun `publicIdentity`(): FfiPublicIdentity
+    
+    /**
+     * Publishes a fresh signed prekey under the next id, for when the server
+     * reports the current one is stale. Upload the result with
+     * `NetSession.keys_upload`. The previous private key is retained so
+     * messages already encrypted against it still open.
+     */
+    fun `rotateSignedPrekey`(`oneTimeCount`: kotlin.UInt): FfiPrekeyUpload
+    
+    fun `saveMessage`(`message`: FfiStoredMessage)
+    
+    /**
+     * Verify a peer's `PrekeyBundleProof` (the `proof` field of a
+     * `KeysPeerBundle` device entry) against pinned key-transparency trust
+     * anchors, and check the signed-prekey signature against the trusted
+     * `DeviceSigningKey` extracted from the proof. See `kt::device` for the
+     * verifier (byte-parity ported from the server's reference
+     * implementation) and `e2ee::x3dh::verify_signed_prekey` for the final
+     * signature check.
+     */
+    fun `verifyPeerBundle`(`proof`: kotlin.ByteArray, `trust`: FfiKeyTransparencyTrust): FfiVerifiedPrekeyBundle
     
     companion object
 }
@@ -1430,12 +2646,43 @@ open class NotegramCore: Disposable, AutoCloseable, NotegramCoreInterface {
     
 
     
+    /**
+     * Opens an incoming message, establishing the inbound session first when
+     * the envelope is a `signal-prekey.v1` handshake. The returned metadata is
+     * what the sender authenticated, not what the server claimed.
+     */
+    @Throws(FfiException::class)override fun `decryptMessage`(`peer`: FfiPeerAddress, `envelopeType`: kotlin.String, `header`: kotlin.ByteArray, `ciphertext`: kotlin.ByteArray, `associatedData`: kotlin.ByteArray): FfiDecryptedMessage {
+            return FfiConverterTypeFfiDecryptedMessage.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_decrypt_message(
+        it, FfiConverterTypeFfiPeerAddress.lower(`peer`),FfiConverterString.lower(`envelopeType`),FfiConverterByteArray.lower(`header`),FfiConverterByteArray.lower(`ciphertext`),FfiConverterByteArray.lower(`associatedData`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `encrypt`(`peer`: FfiPeerAddress, `plaintext`: kotlin.ByteArray, `associatedData`: kotlin.ByteArray): kotlin.ByteArray {
             return FfiConverterByteArray.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_encrypt(
         it, FfiConverterTypeFfiPeerAddress.lower(`peer`),FfiConverterByteArray.lower(`plaintext`),FfiConverterByteArray.lower(`associatedData`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `encryptMessage`(`senderUserId`: kotlin.Long, `senderDeviceId`: kotlin.Long, `peer`: FfiPeerAddress, `chatId`: kotlin.Long, `clientMsgId`: kotlin.String, `body`: FfiMessageBody, `newSessionBundle`: FfiRecipientPreKeyBundle?, `replyTo`: kotlin.Long?): FfiOutgoingEnvelope {
+            return FfiConverterTypeFfiOutgoingEnvelope.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_encrypt_message(
+        it, FfiConverterLong.lower(`senderUserId`),FfiConverterLong.lower(`senderDeviceId`),FfiConverterTypeFfiPeerAddress.lower(`peer`),FfiConverterLong.lower(`chatId`),FfiConverterString.lower(`clientMsgId`),FfiConverterTypeFfiMessageBody.lower(`body`),FfiConverterOptionalTypeFfiRecipientPreKeyBundle.lower(`newSessionBundle`),FfiConverterOptionalLong.lower(`replyTo`),_status)
 }
     }
     )
@@ -1461,6 +2708,19 @@ open class NotegramCore: Disposable, AutoCloseable, NotegramCoreInterface {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_establish_outbound_session(
         it, FfiConverterTypeFfiPeerAddress.lower(`peer`),FfiConverterTypeFfiPreKeyBundle.lower(`bundle`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `generatePrekeyBundle`(`oneTimeCount`: kotlin.UInt): FfiPrekeyUpload {
+            return FfiConverterTypeFfiPrekeyUpload.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_generate_prekey_bundle(
+        it, FfiConverterUInt.lower(`oneTimeCount`),_status)
 }
     }
     )
@@ -1494,12 +2754,169 @@ open class NotegramCore: Disposable, AutoCloseable, NotegramCoreInterface {
     
 
     
+    /**
+     * Latest message per chat, newest chat first — for the chat list.
+     */
+    @Throws(FfiException::class)override fun `listChatPreviews`(): List<FfiStoredMessage> {
+            return FfiConverterSequenceTypeFfiStoredMessage.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_list_chat_previews(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Messages of one chat, oldest first. `limit` of 0 means no cap.
+     */
+    @Throws(FfiException::class)override fun `listMessages`(`chatId`: kotlin.Long, `limit`: kotlin.UInt): List<FfiStoredMessage> {
+            return FfiConverterSequenceTypeFfiStoredMessage.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_list_messages(
+        it, FfiConverterLong.lower(`chatId`),FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Advances an outgoing message's delivery status, matched by the id the
+     * sender chose. Status never regresses, so notices arriving out of order
+     * are safe to apply. Returns whether anything changed.
+     */
+    @Throws(FfiException::class)override fun `markMessageStatus`(`chatId`: kotlin.Long, `clientMsgId`: kotlin.String, `status`: FfiMessageStatus): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_mark_message_status(
+        it, FfiConverterLong.lower(`chatId`),FfiConverterString.lower(`clientMsgId`),FfiConverterTypeFfiMessageStatus.lower(`status`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Applies a peer's read receipt to our own messages in that chat. Returns
+     * how many rows changed, so the caller only redraws when something did.
+     */
+    @Throws(FfiException::class)override fun `markReadUpTo`(`chatId`: kotlin.Long, `upToCreatedAt`: kotlin.Long): kotlin.UInt {
+            return FfiConverterUInt.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_mark_read_up_to(
+        it, FfiConverterLong.lower(`chatId`),FfiConverterLong.lower(`upToCreatedAt`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * The handle a reply points at, derived from the message's client id. Both
+     * sides compute it the same way, so no id has to be exchanged.
+     */override fun `messageRef`(`clientMsgId`: kotlin.String): kotlin.Long {
+            return FfiConverterLong.lift(
+    callWithPointer {
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_message_ref(
+        it, FfiConverterString.lower(`clientMsgId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Builds an upload that adds `count` fresh one-time prekeys when the
+     * server reports the device is running low. Pass the result straight to
+     * `NetSession.keys_upload`: it repeats the existing identity and signed
+     * prekey unchanged (the server rejects a changed one under the same id)
+     * and only the one-time keys are new, with ids continuing the sequence so
+     * nothing the server still advertises is invalidated.
+     */
+    @Throws(FfiException::class)override fun `prekeyTopUp`(`count`: kotlin.UInt): FfiPrekeyUpload {
+            return FfiConverterTypeFfiPrekeyUpload.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_prekey_top_up(
+        it, FfiConverterUInt.lower(`count`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `publicIdentity`(): FfiPublicIdentity {
             return FfiConverterTypeFfiPublicIdentity.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_public_identity(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Publishes a fresh signed prekey under the next id, for when the server
+     * reports the current one is stale. Upload the result with
+     * `NetSession.keys_upload`. The previous private key is retained so
+     * messages already encrypted against it still open.
+     */
+    @Throws(FfiException::class)override fun `rotateSignedPrekey`(`oneTimeCount`: kotlin.UInt): FfiPrekeyUpload {
+            return FfiConverterTypeFfiPrekeyUpload.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_rotate_signed_prekey(
+        it, FfiConverterUInt.lower(`oneTimeCount`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `saveMessage`(`message`: FfiStoredMessage)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_save_message(
+        it, FfiConverterTypeFfiStoredMessage.lower(`message`),_status)
+}
+    }
+    
+    
+
+    
+    /**
+     * Verify a peer's `PrekeyBundleProof` (the `proof` field of a
+     * `KeysPeerBundle` device entry) against pinned key-transparency trust
+     * anchors, and check the signed-prekey signature against the trusted
+     * `DeviceSigningKey` extracted from the proof. See `kt::device` for the
+     * verifier (byte-parity ported from the server's reference
+     * implementation) and `e2ee::x3dh::verify_signed_prekey` for the final
+     * signature check.
+     */
+    @Throws(FfiException::class)override fun `verifyPeerBundle`(`proof`: kotlin.ByteArray, `trust`: FfiKeyTransparencyTrust): FfiVerifiedPrekeyBundle {
+            return FfiConverterTypeFfiVerifiedPrekeyBundle.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_verify_peer_bundle(
+        it, FfiConverterByteArray.lower(`proof`),FfiConverterTypeFfiKeyTransparencyTrust.lower(`trust`),_status)
 }
     }
     )
@@ -1556,6 +2973,502 @@ public object FfiConverterTypeNotegramCore: FfiConverter<NotegramCore, Pointer> 
 
 
 
+data class FfiAuthKeys (
+    var `authKey`: kotlin.ByteArray, 
+    var `authKeyId`: kotlin.ULong, 
+    var `userId`: kotlin.Long
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiAuthKeys: FfiConverterRustBuffer<FfiAuthKeys> {
+    override fun read(buf: ByteBuffer): FfiAuthKeys {
+        return FfiAuthKeys(
+            FfiConverterByteArray.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiAuthKeys) = (
+            FfiConverterByteArray.allocationSize(value.`authKey`) +
+            FfiConverterULong.allocationSize(value.`authKeyId`) +
+            FfiConverterLong.allocationSize(value.`userId`)
+    )
+
+    override fun write(value: FfiAuthKeys, buf: ByteBuffer) {
+            FfiConverterByteArray.write(value.`authKey`, buf)
+            FfiConverterULong.write(value.`authKeyId`, buf)
+            FfiConverterLong.write(value.`userId`, buf)
+    }
+}
+
+
+
+/**
+ * A decrypted message together with the metadata its sender bound into the
+ * associated data — authenticated by the AEAD tag, unlike the copy the server
+ * sends alongside it in `FfiIncomingMessage`.
+ */
+data class FfiDecryptedMessage (
+    var `body`: FfiMessageBody, 
+    var `chatId`: kotlin.Long, 
+    var `clientMsgId`: kotlin.String, 
+    /**
+     * The `message_ref` of the message this one answers, if it is a reply.
+     */
+    var `replyTo`: kotlin.Long?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDecryptedMessage: FfiConverterRustBuffer<FfiDecryptedMessage> {
+    override fun read(buf: ByteBuffer): FfiDecryptedMessage {
+        return FfiDecryptedMessage(
+            FfiConverterTypeFfiMessageBody.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDecryptedMessage) = (
+            FfiConverterTypeFfiMessageBody.allocationSize(value.`body`) +
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterString.allocationSize(value.`clientMsgId`) +
+            FfiConverterOptionalLong.allocationSize(value.`replyTo`)
+    )
+
+    override fun write(value: FfiDecryptedMessage, buf: ByteBuffer) {
+            FfiConverterTypeFfiMessageBody.write(value.`body`, buf)
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterString.write(value.`clientMsgId`, buf)
+            FfiConverterOptionalLong.write(value.`replyTo`, buf)
+    }
+}
+
+
+
+/**
+ * A server push saying one of our messages reached a recipient device.
+ */
+data class FfiDeliveryUpdate (
+    var `chatId`: kotlin.Long, 
+    var `clientMsgId`: kotlin.String, 
+    var `recipientUserId`: kotlin.Long, 
+    var `recipientDeviceId`: kotlin.Long, 
+    var `deliveredAt`: kotlin.Long
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDeliveryUpdate: FfiConverterRustBuffer<FfiDeliveryUpdate> {
+    override fun read(buf: ByteBuffer): FfiDeliveryUpdate {
+        return FfiDeliveryUpdate(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDeliveryUpdate) = (
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterString.allocationSize(value.`clientMsgId`) +
+            FfiConverterLong.allocationSize(value.`recipientUserId`) +
+            FfiConverterLong.allocationSize(value.`recipientDeviceId`) +
+            FfiConverterLong.allocationSize(value.`deliveredAt`)
+    )
+
+    override fun write(value: FfiDeliveryUpdate, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterString.write(value.`clientMsgId`, buf)
+            FfiConverterLong.write(value.`recipientUserId`, buf)
+            FfiConverterLong.write(value.`recipientDeviceId`, buf)
+            FfiConverterLong.write(value.`deliveredAt`, buf)
+    }
+}
+
+
+
+data class FfiDevice (
+    var `deviceId`: kotlin.Long, 
+    var `purpose`: kotlin.String, 
+    var `disabled`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDevice: FfiConverterRustBuffer<FfiDevice> {
+    override fun read(buf: ByteBuffer): FfiDevice {
+        return FfiDevice(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDevice) = (
+            FfiConverterLong.allocationSize(value.`deviceId`) +
+            FfiConverterString.allocationSize(value.`purpose`) +
+            FfiConverterBoolean.allocationSize(value.`disabled`)
+    )
+
+    override fun write(value: FfiDevice, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`deviceId`, buf)
+            FfiConverterString.write(value.`purpose`, buf)
+            FfiConverterBoolean.write(value.`disabled`, buf)
+    }
+}
+
+
+
+data class FfiEncryptedRecipient (
+    var `userId`: kotlin.Long, 
+    var `deviceId`: kotlin.Long, 
+    var `envelopeType`: kotlin.String, 
+    var `header`: kotlin.ByteArray, 
+    var `ciphertext`: kotlin.ByteArray
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiEncryptedRecipient: FfiConverterRustBuffer<FfiEncryptedRecipient> {
+    override fun read(buf: ByteBuffer): FfiEncryptedRecipient {
+        return FfiEncryptedRecipient(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiEncryptedRecipient) = (
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterLong.allocationSize(value.`deviceId`) +
+            FfiConverterString.allocationSize(value.`envelopeType`) +
+            FfiConverterByteArray.allocationSize(value.`header`) +
+            FfiConverterByteArray.allocationSize(value.`ciphertext`)
+    )
+
+    override fun write(value: FfiEncryptedRecipient, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterLong.write(value.`deviceId`, buf)
+            FfiConverterString.write(value.`envelopeType`, buf)
+            FfiConverterByteArray.write(value.`header`, buf)
+            FfiConverterByteArray.write(value.`ciphertext`, buf)
+    }
+}
+
+
+
+data class FfiEncryptedSent (
+    var `serverMsgId`: kotlin.String, 
+    var `createdAt`: kotlin.Long, 
+    var `recipientCount`: kotlin.Int
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiEncryptedSent: FfiConverterRustBuffer<FfiEncryptedSent> {
+    override fun read(buf: ByteBuffer): FfiEncryptedSent {
+        return FfiEncryptedSent(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiEncryptedSent) = (
+            FfiConverterString.allocationSize(value.`serverMsgId`) +
+            FfiConverterLong.allocationSize(value.`createdAt`) +
+            FfiConverterInt.allocationSize(value.`recipientCount`)
+    )
+
+    override fun write(value: FfiEncryptedSent, buf: ByteBuffer) {
+            FfiConverterString.write(value.`serverMsgId`, buf)
+            FfiConverterLong.write(value.`createdAt`, buf)
+            FfiConverterInt.write(value.`recipientCount`, buf)
+    }
+}
+
+
+
+/**
+ * An encrypted message waiting for this device. Feed `header`, `ciphertext`
+ * and `associated_data` into `NotegramCore.decrypt_message`, then ack it by
+ * `server_msg_id` so the server stops redelivering it.
+ */
+data class FfiIncomingMessage (
+    var `serverMsgId`: kotlin.String, 
+    var `senderUserId`: kotlin.Long, 
+    var `senderDeviceId`: kotlin.Long, 
+    var `chatId`: kotlin.Long, 
+    var `clientMsgId`: kotlin.String, 
+    var `schema`: kotlin.String, 
+    var `suite`: kotlin.String, 
+    var `envelopeType`: kotlin.String, 
+    var `header`: kotlin.ByteArray, 
+    var `ciphertext`: kotlin.ByteArray, 
+    var `associatedData`: kotlin.ByteArray, 
+    var `createdAt`: kotlin.Long
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiIncomingMessage: FfiConverterRustBuffer<FfiIncomingMessage> {
+    override fun read(buf: ByteBuffer): FfiIncomingMessage {
+        return FfiIncomingMessage(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiIncomingMessage) = (
+            FfiConverterString.allocationSize(value.`serverMsgId`) +
+            FfiConverterLong.allocationSize(value.`senderUserId`) +
+            FfiConverterLong.allocationSize(value.`senderDeviceId`) +
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterString.allocationSize(value.`clientMsgId`) +
+            FfiConverterString.allocationSize(value.`schema`) +
+            FfiConverterString.allocationSize(value.`suite`) +
+            FfiConverterString.allocationSize(value.`envelopeType`) +
+            FfiConverterByteArray.allocationSize(value.`header`) +
+            FfiConverterByteArray.allocationSize(value.`ciphertext`) +
+            FfiConverterByteArray.allocationSize(value.`associatedData`) +
+            FfiConverterLong.allocationSize(value.`createdAt`)
+    )
+
+    override fun write(value: FfiIncomingMessage, buf: ByteBuffer) {
+            FfiConverterString.write(value.`serverMsgId`, buf)
+            FfiConverterLong.write(value.`senderUserId`, buf)
+            FfiConverterLong.write(value.`senderDeviceId`, buf)
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterString.write(value.`clientMsgId`, buf)
+            FfiConverterString.write(value.`schema`, buf)
+            FfiConverterString.write(value.`suite`, buf)
+            FfiConverterString.write(value.`envelopeType`, buf)
+            FfiConverterByteArray.write(value.`header`, buf)
+            FfiConverterByteArray.write(value.`ciphertext`, buf)
+            FfiConverterByteArray.write(value.`associatedData`, buf)
+            FfiConverterLong.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+/**
+ * Trust anchors the app pins for key-transparency verification (analogous to
+ * how `server_ed_pub` is supplied by the caller of `NetSession::connect`
+ * rather than hardcoded in `core`).
+ */
+data class FfiKeyTransparencyTrust (
+    var `signingPublicKeys`: List<kotlin.ByteArray>, 
+    var `witnessPublicKeys`: List<kotlin.ByteArray>, 
+    var `minWitnessSignatures`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiKeyTransparencyTrust: FfiConverterRustBuffer<FfiKeyTransparencyTrust> {
+    override fun read(buf: ByteBuffer): FfiKeyTransparencyTrust {
+        return FfiKeyTransparencyTrust(
+            FfiConverterSequenceByteArray.read(buf),
+            FfiConverterSequenceByteArray.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiKeyTransparencyTrust) = (
+            FfiConverterSequenceByteArray.allocationSize(value.`signingPublicKeys`) +
+            FfiConverterSequenceByteArray.allocationSize(value.`witnessPublicKeys`) +
+            FfiConverterUInt.allocationSize(value.`minWitnessSignatures`)
+    )
+
+    override fun write(value: FfiKeyTransparencyTrust, buf: ByteBuffer) {
+            FfiConverterSequenceByteArray.write(value.`signingPublicKeys`, buf)
+            FfiConverterSequenceByteArray.write(value.`witnessPublicKeys`, buf)
+            FfiConverterUInt.write(value.`minWitnessSignatures`, buf)
+    }
+}
+
+
+
+/**
+ * Prekey health for this device. `low_watermark` is the server telling the
+ * client to top up before it runs out of one-time prekeys.
+ */
+data class FfiKeysStatus (
+    var `deviceId`: kotlin.Long, 
+    var `remainingOneTime`: kotlin.Int, 
+    var `lowWatermark`: kotlin.Boolean, 
+    var `targetOneTime`: kotlin.Int, 
+    var `maxOneTime`: kotlin.Int, 
+    var `needsSignedPreKeyRotation`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiKeysStatus: FfiConverterRustBuffer<FfiKeysStatus> {
+    override fun read(buf: ByteBuffer): FfiKeysStatus {
+        return FfiKeysStatus(
+            FfiConverterLong.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiKeysStatus) = (
+            FfiConverterLong.allocationSize(value.`deviceId`) +
+            FfiConverterInt.allocationSize(value.`remainingOneTime`) +
+            FfiConverterBoolean.allocationSize(value.`lowWatermark`) +
+            FfiConverterInt.allocationSize(value.`targetOneTime`) +
+            FfiConverterInt.allocationSize(value.`maxOneTime`) +
+            FfiConverterBoolean.allocationSize(value.`needsSignedPreKeyRotation`)
+    )
+
+    override fun write(value: FfiKeysStatus, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`deviceId`, buf)
+            FfiConverterInt.write(value.`remainingOneTime`, buf)
+            FfiConverterBoolean.write(value.`lowWatermark`, buf)
+            FfiConverterInt.write(value.`targetOneTime`, buf)
+            FfiConverterInt.write(value.`maxOneTime`, buf)
+            FfiConverterBoolean.write(value.`needsSignedPreKeyRotation`, buf)
+    }
+}
+
+
+
+/**
+ * A server push saying this device has messages waiting.
+ */
+data class FfiNewMessageUpdate (
+    var `chatId`: kotlin.Long, 
+    var `senderUserId`: kotlin.Long, 
+    var `pendingCount`: kotlin.Int
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiNewMessageUpdate: FfiConverterRustBuffer<FfiNewMessageUpdate> {
+    override fun read(buf: ByteBuffer): FfiNewMessageUpdate {
+        return FfiNewMessageUpdate(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiNewMessageUpdate) = (
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterLong.allocationSize(value.`senderUserId`) +
+            FfiConverterInt.allocationSize(value.`pendingCount`)
+    )
+
+    override fun write(value: FfiNewMessageUpdate, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterLong.write(value.`senderUserId`, buf)
+            FfiConverterInt.write(value.`pendingCount`, buf)
+    }
+}
+
+
+
+data class FfiOutgoingEnvelope (
+    var `envelopeType`: kotlin.String, 
+    var `header`: kotlin.ByteArray, 
+    var `ciphertext`: kotlin.ByteArray, 
+    var `associatedData`: kotlin.ByteArray
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiOutgoingEnvelope: FfiConverterRustBuffer<FfiOutgoingEnvelope> {
+    override fun read(buf: ByteBuffer): FfiOutgoingEnvelope {
+        return FfiOutgoingEnvelope(
+            FfiConverterString.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiOutgoingEnvelope) = (
+            FfiConverterString.allocationSize(value.`envelopeType`) +
+            FfiConverterByteArray.allocationSize(value.`header`) +
+            FfiConverterByteArray.allocationSize(value.`ciphertext`) +
+            FfiConverterByteArray.allocationSize(value.`associatedData`)
+    )
+
+    override fun write(value: FfiOutgoingEnvelope, buf: ByteBuffer) {
+            FfiConverterString.write(value.`envelopeType`, buf)
+            FfiConverterByteArray.write(value.`header`, buf)
+            FfiConverterByteArray.write(value.`ciphertext`, buf)
+            FfiConverterByteArray.write(value.`associatedData`, buf)
+    }
+}
+
+
+
 data class FfiPeerAddress (
     var `userId`: kotlin.Long, 
     var `deviceId`: kotlin.Long
@@ -1583,6 +3496,66 @@ public object FfiConverterTypeFfiPeerAddress: FfiConverterRustBuffer<FfiPeerAddr
     override fun write(value: FfiPeerAddress, buf: ByteBuffer) {
             FfiConverterLong.write(value.`userId`, buf)
             FfiConverterLong.write(value.`deviceId`, buf)
+    }
+}
+
+
+
+data class FfiPeerDevice (
+    var `deviceId`: kotlin.Long, 
+    var `identityKey`: kotlin.ByteArray, 
+    var `signedPreKeyId`: kotlin.Int, 
+    var `signedPreKeyPub`: kotlin.ByteArray, 
+    var `signedPreKeySig`: kotlin.ByteArray, 
+    var `oneTimePreKeyId`: kotlin.Int, 
+    var `oneTimePreKeyPub`: kotlin.ByteArray, 
+    /**
+     * Raw `PrekeyBundleProof` JSON blob — feed into `NotegramCore.verify_peer_bundle`
+     * before trusting any of the fields above.
+     */
+    var `proof`: kotlin.ByteArray
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPeerDevice: FfiConverterRustBuffer<FfiPeerDevice> {
+    override fun read(buf: ByteBuffer): FfiPeerDevice {
+        return FfiPeerDevice(
+            FfiConverterLong.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPeerDevice) = (
+            FfiConverterLong.allocationSize(value.`deviceId`) +
+            FfiConverterByteArray.allocationSize(value.`identityKey`) +
+            FfiConverterInt.allocationSize(value.`signedPreKeyId`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeyPub`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeySig`) +
+            FfiConverterInt.allocationSize(value.`oneTimePreKeyId`) +
+            FfiConverterByteArray.allocationSize(value.`oneTimePreKeyPub`) +
+            FfiConverterByteArray.allocationSize(value.`proof`)
+    )
+
+    override fun write(value: FfiPeerDevice, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`deviceId`, buf)
+            FfiConverterByteArray.write(value.`identityKey`, buf)
+            FfiConverterInt.write(value.`signedPreKeyId`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeyPub`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeySig`, buf)
+            FfiConverterInt.write(value.`oneTimePreKeyId`, buf)
+            FfiConverterByteArray.write(value.`oneTimePreKeyPub`, buf)
+            FfiConverterByteArray.write(value.`proof`, buf)
     }
 }
 
@@ -1632,6 +3605,118 @@ public object FfiConverterTypeFfiPreKeyBundle: FfiConverterRustBuffer<FfiPreKeyB
 
 
 
+data class FfiPrekeyUpload (
+    var `identityKey`: kotlin.ByteArray, 
+    var `signedPreKeyId`: kotlin.Int, 
+    var `signedPreKeyPub`: kotlin.ByteArray, 
+    var `signedPreKeySig`: kotlin.ByteArray, 
+    var `oneTimePreKeys`: List<FfiPrekeyUploadOtk>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPrekeyUpload: FfiConverterRustBuffer<FfiPrekeyUpload> {
+    override fun read(buf: ByteBuffer): FfiPrekeyUpload {
+        return FfiPrekeyUpload(
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterSequenceTypeFfiPrekeyUploadOtk.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPrekeyUpload) = (
+            FfiConverterByteArray.allocationSize(value.`identityKey`) +
+            FfiConverterInt.allocationSize(value.`signedPreKeyId`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeyPub`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeySig`) +
+            FfiConverterSequenceTypeFfiPrekeyUploadOtk.allocationSize(value.`oneTimePreKeys`)
+    )
+
+    override fun write(value: FfiPrekeyUpload, buf: ByteBuffer) {
+            FfiConverterByteArray.write(value.`identityKey`, buf)
+            FfiConverterInt.write(value.`signedPreKeyId`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeyPub`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeySig`, buf)
+            FfiConverterSequenceTypeFfiPrekeyUploadOtk.write(value.`oneTimePreKeys`, buf)
+    }
+}
+
+
+
+data class FfiPrekeyUploadOtk (
+    var `id`: kotlin.Int, 
+    var `pubkey`: kotlin.ByteArray
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPrekeyUploadOtk: FfiConverterRustBuffer<FfiPrekeyUploadOtk> {
+    override fun read(buf: ByteBuffer): FfiPrekeyUploadOtk {
+        return FfiPrekeyUploadOtk(
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPrekeyUploadOtk) = (
+            FfiConverterInt.allocationSize(value.`id`) +
+            FfiConverterByteArray.allocationSize(value.`pubkey`)
+    )
+
+    override fun write(value: FfiPrekeyUploadOtk, buf: ByteBuffer) {
+            FfiConverterInt.write(value.`id`, buf)
+            FfiConverterByteArray.write(value.`pubkey`, buf)
+    }
+}
+
+
+
+data class FfiProfile (
+    var `userId`: kotlin.Long, 
+    var `displayName`: kotlin.String, 
+    var `bio`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProfile: FfiConverterRustBuffer<FfiProfile> {
+    override fun read(buf: ByteBuffer): FfiProfile {
+        return FfiProfile(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProfile) = (
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterString.allocationSize(value.`bio`)
+    )
+
+    override fun write(value: FfiProfile, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterString.write(value.`bio`, buf)
+    }
+}
+
+
+
 data class FfiPublicIdentity (
     var `identityPub`: kotlin.ByteArray, 
     var `signingPub`: kotlin.ByteArray, 
@@ -1663,6 +3748,297 @@ public object FfiConverterTypeFfiPublicIdentity: FfiConverterRustBuffer<FfiPubli
             FfiConverterByteArray.write(value.`identityPub`, buf)
             FfiConverterByteArray.write(value.`signingPub`, buf)
             FfiConverterUInt.write(value.`registrationId`, buf)
+    }
+}
+
+
+
+/**
+ * The recipient's C2-KT-verified prekey bundle — build from
+ * `NotegramCore.verify_peer_bundle`'s result. Only needed when there is no
+ * existing outbound ratchet session with this peer yet.
+ */
+data class FfiRecipientPreKeyBundle (
+    var `identityKey`: kotlin.ByteArray, 
+    var `signingPub`: kotlin.ByteArray, 
+    var `signedPrekeyId`: kotlin.Int, 
+    var `signedPrekeyPub`: kotlin.ByteArray, 
+    var `signedPrekeySig`: kotlin.ByteArray, 
+    var `oneTimePrekeyId`: kotlin.Int, 
+    var `oneTimePrekeyPub`: kotlin.ByteArray?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiRecipientPreKeyBundle: FfiConverterRustBuffer<FfiRecipientPreKeyBundle> {
+    override fun read(buf: ByteBuffer): FfiRecipientPreKeyBundle {
+        return FfiRecipientPreKeyBundle(
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterOptionalByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiRecipientPreKeyBundle) = (
+            FfiConverterByteArray.allocationSize(value.`identityKey`) +
+            FfiConverterByteArray.allocationSize(value.`signingPub`) +
+            FfiConverterInt.allocationSize(value.`signedPrekeyId`) +
+            FfiConverterByteArray.allocationSize(value.`signedPrekeyPub`) +
+            FfiConverterByteArray.allocationSize(value.`signedPrekeySig`) +
+            FfiConverterInt.allocationSize(value.`oneTimePrekeyId`) +
+            FfiConverterOptionalByteArray.allocationSize(value.`oneTimePrekeyPub`)
+    )
+
+    override fun write(value: FfiRecipientPreKeyBundle, buf: ByteBuffer) {
+            FfiConverterByteArray.write(value.`identityKey`, buf)
+            FfiConverterByteArray.write(value.`signingPub`, buf)
+            FfiConverterInt.write(value.`signedPrekeyId`, buf)
+            FfiConverterByteArray.write(value.`signedPrekeyPub`, buf)
+            FfiConverterByteArray.write(value.`signedPrekeySig`, buf)
+            FfiConverterInt.write(value.`oneTimePrekeyId`, buf)
+            FfiConverterOptionalByteArray.write(value.`oneTimePrekeyPub`, buf)
+    }
+}
+
+
+
+data class FfiResolved (
+    var `username`: kotlin.String, 
+    var `userId`: kotlin.Long, 
+    var `displayName`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiResolved: FfiConverterRustBuffer<FfiResolved> {
+    override fun read(buf: ByteBuffer): FfiResolved {
+        return FfiResolved(
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiResolved) = (
+            FfiConverterString.allocationSize(value.`username`) +
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterString.allocationSize(value.`displayName`)
+    )
+
+    override fun write(value: FfiResolved, buf: ByteBuffer) {
+            FfiConverterString.write(value.`username`, buf)
+            FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+    }
+}
+
+
+
+data class FfiSentCode (
+    var `emailHash`: kotlin.ByteArray, 
+    var `timeout`: kotlin.Int
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiSentCode: FfiConverterRustBuffer<FfiSentCode> {
+    override fun read(buf: ByteBuffer): FfiSentCode {
+        return FfiSentCode(
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiSentCode) = (
+            FfiConverterByteArray.allocationSize(value.`emailHash`) +
+            FfiConverterInt.allocationSize(value.`timeout`)
+    )
+
+    override fun write(value: FfiSentCode, buf: ByteBuffer) {
+            FfiConverterByteArray.write(value.`emailHash`, buf)
+            FfiConverterInt.write(value.`timeout`, buf)
+    }
+}
+
+
+
+/**
+ * A message in local history. The server keeps only ciphertext and drops it on
+ * ack, so this is the durable copy of a conversation.
+ */
+data class FfiStoredMessage (
+    var `chatId`: kotlin.Long, 
+    var `peerUserId`: kotlin.Long, 
+    var `outgoing`: kotlin.Boolean, 
+    var `clientMsgId`: kotlin.String, 
+    var `text`: kotlin.String, 
+    var `createdAt`: kotlin.Long, 
+    /**
+     * Delivery state; always Sent for incoming messages.
+     */
+    var `status`: FfiMessageStatus, 
+    /**
+     * Set when this message answers another one, holding that message's
+     * `message_ref`. Null for an ordinary message.
+     */
+    var `replyTo`: kotlin.Long?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer<FfiStoredMessage> {
+    override fun read(buf: ByteBuffer): FfiStoredMessage {
+        return FfiStoredMessage(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterTypeFfiMessageStatus.read(buf),
+            FfiConverterOptionalLong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiStoredMessage) = (
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterLong.allocationSize(value.`peerUserId`) +
+            FfiConverterBoolean.allocationSize(value.`outgoing`) +
+            FfiConverterString.allocationSize(value.`clientMsgId`) +
+            FfiConverterString.allocationSize(value.`text`) +
+            FfiConverterLong.allocationSize(value.`createdAt`) +
+            FfiConverterTypeFfiMessageStatus.allocationSize(value.`status`) +
+            FfiConverterOptionalLong.allocationSize(value.`replyTo`)
+    )
+
+    override fun write(value: FfiStoredMessage, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterLong.write(value.`peerUserId`, buf)
+            FfiConverterBoolean.write(value.`outgoing`, buf)
+            FfiConverterString.write(value.`clientMsgId`, buf)
+            FfiConverterString.write(value.`text`, buf)
+            FfiConverterLong.write(value.`createdAt`, buf)
+            FfiConverterTypeFfiMessageStatus.write(value.`status`, buf)
+            FfiConverterOptionalLong.write(value.`replyTo`, buf)
+    }
+}
+
+
+
+data class FfiVerified (
+    var `userId`: kotlin.Long, 
+    var `tmpToken`: kotlin.ByteArray
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiVerified: FfiConverterRustBuffer<FfiVerified> {
+    override fun read(buf: ByteBuffer): FfiVerified {
+        return FfiVerified(
+            FfiConverterLong.read(buf),
+            FfiConverterByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiVerified) = (
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterByteArray.allocationSize(value.`tmpToken`)
+    )
+
+    override fun write(value: FfiVerified, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterByteArray.write(value.`tmpToken`, buf)
+    }
+}
+
+
+
+/**
+ * A peer's prekey bundle after its `PrekeyBundleProof` (device-level key
+ * transparency chain: receipt signature, checkpoint hash-chain, consistency
+ * proof, witness signatures) has been fully verified and the device's
+ * trusted signing key extracted, and the signed-prekey signature checked
+ * against it. Safe to feed into `establish_outbound_session`.
+ */
+data class FfiVerifiedPrekeyBundle (
+    var `userId`: kotlin.Long, 
+    var `deviceId`: kotlin.Long, 
+    var `identityKey`: kotlin.ByteArray, 
+    var `deviceSigningKey`: kotlin.ByteArray, 
+    var `signedPreKeyId`: kotlin.Int, 
+    var `signedPreKeyPub`: kotlin.ByteArray, 
+    var `signedPreKeySig`: kotlin.ByteArray, 
+    var `oneTimePreKeyId`: kotlin.Int, 
+    var `oneTimePreKeyPub`: kotlin.ByteArray?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiVerifiedPrekeyBundle: FfiConverterRustBuffer<FfiVerifiedPrekeyBundle> {
+    override fun read(buf: ByteBuffer): FfiVerifiedPrekeyBundle {
+        return FfiVerifiedPrekeyBundle(
+            FfiConverterLong.read(buf),
+            FfiConverterLong.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterByteArray.read(buf),
+            FfiConverterInt.read(buf),
+            FfiConverterOptionalByteArray.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiVerifiedPrekeyBundle) = (
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterLong.allocationSize(value.`deviceId`) +
+            FfiConverterByteArray.allocationSize(value.`identityKey`) +
+            FfiConverterByteArray.allocationSize(value.`deviceSigningKey`) +
+            FfiConverterInt.allocationSize(value.`signedPreKeyId`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeyPub`) +
+            FfiConverterByteArray.allocationSize(value.`signedPreKeySig`) +
+            FfiConverterInt.allocationSize(value.`oneTimePreKeyId`) +
+            FfiConverterOptionalByteArray.allocationSize(value.`oneTimePreKeyPub`)
+    )
+
+    override fun write(value: FfiVerifiedPrekeyBundle, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterLong.write(value.`deviceId`, buf)
+            FfiConverterByteArray.write(value.`identityKey`, buf)
+            FfiConverterByteArray.write(value.`deviceSigningKey`, buf)
+            FfiConverterInt.write(value.`signedPreKeyId`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeyPub`, buf)
+            FfiConverterByteArray.write(value.`signedPreKeySig`, buf)
+            FfiConverterInt.write(value.`oneTimePreKeyId`, buf)
+            FfiConverterOptionalByteArray.write(value.`oneTimePreKeyPub`, buf)
     }
 }
 
@@ -1708,10 +4084,28 @@ sealed class FfiException: kotlin.Exception() {
             get() = ""
     }
     
+    /**
+     * The sender named by the server is not the sender the message itself
+     * authenticates. The message must not be shown.
+     */
+    class MisattributedMessage(
+        ) : FfiException() {
+        override val message
+            get() = ""
+    }
+    
     class BadInput(
         ) : FfiException() {
         override val message
             get() = ""
+    }
+    
+    class UntrustedPeerBundleProof(
+        
+        val v1: kotlin.String
+        ) : FfiException() {
+        override val message
+            get() = "v1=${ v1 }"
     }
     
 
@@ -1736,7 +4130,11 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
             4 -> FfiException.BadPrekeySignature()
             5 -> FfiException.BadKeyMaterial()
             6 -> FfiException.NoIdentity()
-            7 -> FfiException.BadInput()
+            7 -> FfiException.MisattributedMessage()
+            8 -> FfiException.BadInput()
+            9 -> FfiException.UntrustedPeerBundleProof(
+                FfiConverterString.read(buf),
+                )
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
     }
@@ -1767,9 +4165,18 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
             )
+            is FfiException.MisattributedMessage -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
             is FfiException.BadInput -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
+            )
+            is FfiException.UntrustedPeerBundleProof -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.v1)
             )
         }
     }
@@ -1800,13 +4207,319 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
                 buf.putInt(6)
                 Unit
             }
+            is FfiException.MisattributedMessage -> {
+                buf.putInt(7)
+                Unit
+            }
             is FfiException.BadInput -> {
+                buf.putInt(8)
+                Unit
+            }
+            is FfiException.UntrustedPeerBundleProof -> {
+                buf.putInt(9)
+                FfiConverterString.write(value.v1, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
+/**
+ * What a decrypted message contains. Read receipts ride inside the ciphertext
+ * like any other message, so the server never learns that a chat was read.
+ */
+sealed class FfiMessageBody {
+    
+    data class Text(
+        val `text`: kotlin.String) : FfiMessageBody() {
+        companion object
+    }
+    
+    /**
+     * Everything up to this timestamp has been read by the peer.
+     */
+    data class ReadReceipt(
+        val `upToCreatedAt`: kotlin.Long) : FfiMessageBody() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiMessageBody : FfiConverterRustBuffer<FfiMessageBody>{
+    override fun read(buf: ByteBuffer): FfiMessageBody {
+        return when(buf.getInt()) {
+            1 -> FfiMessageBody.Text(
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiMessageBody.ReadReceipt(
+                FfiConverterLong.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiMessageBody) = when(value) {
+        is FfiMessageBody.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+            )
+        }
+        is FfiMessageBody.ReadReceipt -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`upToCreatedAt`)
+            )
+        }
+    }
+
+    override fun write(value: FfiMessageBody, buf: ByteBuffer) {
+        when(value) {
+            is FfiMessageBody.Text -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`text`, buf)
+                Unit
+            }
+            is FfiMessageBody.ReadReceipt -> {
+                buf.putInt(2)
+                FfiConverterLong.write(value.`upToCreatedAt`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+/**
+ * How far an outgoing message got. Only ever moves forward.
+ */
+
+enum class FfiMessageStatus {
+    
+    SENT,
+    DELIVERED,
+    READ;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiMessageStatus: FfiConverterRustBuffer<FfiMessageStatus> {
+    override fun read(buf: ByteBuffer) = try {
+        FfiMessageStatus.values()[buf.getInt() - 1]
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiMessageStatus) = 4UL
+
+    override fun write(value: FfiMessageStatus, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+
+sealed class FfiNetException: kotlin.Exception() {
+    
+    class Tls(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+    class Io(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+    class Admission(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+    class Handshake(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+    class Rpc(
+        
+        val `code`: kotlin.Int, 
+        
+        val `reason`: kotlin.String
+        ) : FfiNetException() {
+        override val message
+            get() = "code=${ `code` }, reason=${ `reason` }"
+    }
+    
+    class Closed(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+    class BadInput(
+        ) : FfiNetException() {
+        override val message
+            get() = ""
+    }
+    
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<FfiNetException> {
+        override fun lift(error_buf: RustBuffer.ByValue): FfiNetException = FfiConverterTypeFfiNetError.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiNetError : FfiConverterRustBuffer<FfiNetException> {
+    override fun read(buf: ByteBuffer): FfiNetException {
+        
+
+        return when(buf.getInt()) {
+            1 -> FfiNetException.Tls()
+            2 -> FfiNetException.Io()
+            3 -> FfiNetException.Admission()
+            4 -> FfiNetException.Handshake()
+            5 -> FfiNetException.Rpc(
+                FfiConverterInt.read(buf),
+                FfiConverterString.read(buf),
+                )
+            6 -> FfiNetException.Closed()
+            7 -> FfiNetException.BadInput()
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiNetException): ULong {
+        return when(value) {
+            is FfiNetException.Tls -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiNetException.Io -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiNetException.Admission -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiNetException.Handshake -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiNetException.Rpc -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterInt.allocationSize(value.`code`)
+                + FfiConverterString.allocationSize(value.`reason`)
+            )
+            is FfiNetException.Closed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+            is FfiNetException.BadInput -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: FfiNetException, buf: ByteBuffer) {
+        when(value) {
+            is FfiNetException.Tls -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiNetException.Io -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiNetException.Admission -> {
+                buf.putInt(3)
+                Unit
+            }
+            is FfiNetException.Handshake -> {
+                buf.putInt(4)
+                Unit
+            }
+            is FfiNetException.Rpc -> {
+                buf.putInt(5)
+                FfiConverterInt.write(value.`code`, buf)
+                FfiConverterString.write(value.`reason`, buf)
+                Unit
+            }
+            is FfiNetException.Closed -> {
+                buf.putInt(6)
+                Unit
+            }
+            is FfiNetException.BadInput -> {
                 buf.putInt(7)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
 
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
+    override fun read(buf: ByteBuffer): kotlin.Long? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterLong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Long?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterLong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Long?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterLong.write(value, buf)
+        }
+    }
 }
 
 
@@ -1840,4 +4553,296 @@ public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteA
         }
     }
 }
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiRecipientPreKeyBundle: FfiConverterRustBuffer<FfiRecipientPreKeyBundle?> {
+    override fun read(buf: ByteBuffer): FfiRecipientPreKeyBundle? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiRecipientPreKeyBundle.read(buf)
+    }
+
+    override fun allocationSize(value: FfiRecipientPreKeyBundle?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiRecipientPreKeyBundle.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiRecipientPreKeyBundle?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiRecipientPreKeyBundle.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceByteArray: FfiConverterRustBuffer<List<kotlin.ByteArray>> {
+    override fun read(buf: ByteBuffer): List<kotlin.ByteArray> {
+        val len = buf.getInt()
+        return List<kotlin.ByteArray>(len) {
+            FfiConverterByteArray.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.ByteArray>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterByteArray.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.ByteArray>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterByteArray.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDeliveryUpdate: FfiConverterRustBuffer<List<FfiDeliveryUpdate>> {
+    override fun read(buf: ByteBuffer): List<FfiDeliveryUpdate> {
+        val len = buf.getInt()
+        return List<FfiDeliveryUpdate>(len) {
+            FfiConverterTypeFfiDeliveryUpdate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDeliveryUpdate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDeliveryUpdate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDeliveryUpdate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDeliveryUpdate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDevice: FfiConverterRustBuffer<List<FfiDevice>> {
+    override fun read(buf: ByteBuffer): List<FfiDevice> {
+        val len = buf.getInt()
+        return List<FfiDevice>(len) {
+            FfiConverterTypeFfiDevice.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDevice>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDevice.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDevice>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDevice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiEncryptedRecipient: FfiConverterRustBuffer<List<FfiEncryptedRecipient>> {
+    override fun read(buf: ByteBuffer): List<FfiEncryptedRecipient> {
+        val len = buf.getInt()
+        return List<FfiEncryptedRecipient>(len) {
+            FfiConverterTypeFfiEncryptedRecipient.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiEncryptedRecipient>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiEncryptedRecipient.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiEncryptedRecipient>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiEncryptedRecipient.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiIncomingMessage: FfiConverterRustBuffer<List<FfiIncomingMessage>> {
+    override fun read(buf: ByteBuffer): List<FfiIncomingMessage> {
+        val len = buf.getInt()
+        return List<FfiIncomingMessage>(len) {
+            FfiConverterTypeFfiIncomingMessage.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiIncomingMessage>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiIncomingMessage.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiIncomingMessage>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiIncomingMessage.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiNewMessageUpdate: FfiConverterRustBuffer<List<FfiNewMessageUpdate>> {
+    override fun read(buf: ByteBuffer): List<FfiNewMessageUpdate> {
+        val len = buf.getInt()
+        return List<FfiNewMessageUpdate>(len) {
+            FfiConverterTypeFfiNewMessageUpdate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiNewMessageUpdate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiNewMessageUpdate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiNewMessageUpdate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiNewMessageUpdate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiPeerDevice: FfiConverterRustBuffer<List<FfiPeerDevice>> {
+    override fun read(buf: ByteBuffer): List<FfiPeerDevice> {
+        val len = buf.getInt()
+        return List<FfiPeerDevice>(len) {
+            FfiConverterTypeFfiPeerDevice.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiPeerDevice>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiPeerDevice.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiPeerDevice>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiPeerDevice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiPrekeyUploadOtk: FfiConverterRustBuffer<List<FfiPrekeyUploadOtk>> {
+    override fun read(buf: ByteBuffer): List<FfiPrekeyUploadOtk> {
+        val len = buf.getInt()
+        return List<FfiPrekeyUploadOtk>(len) {
+            FfiConverterTypeFfiPrekeyUploadOtk.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiPrekeyUploadOtk>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiPrekeyUploadOtk.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiPrekeyUploadOtk>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiPrekeyUploadOtk.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiStoredMessage: FfiConverterRustBuffer<List<FfiStoredMessage>> {
+    override fun read(buf: ByteBuffer): List<FfiStoredMessage> {
+        val len = buf.getInt()
+        return List<FfiStoredMessage>(len) {
+            FfiConverterTypeFfiStoredMessage.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiStoredMessage>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiStoredMessage.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiStoredMessage>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiStoredMessage.write(it, buf)
+        }
+    }
+}
+
+
+
+
+
+
+
+
 

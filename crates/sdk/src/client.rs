@@ -422,11 +422,12 @@ impl<B: Backend> NotegramClient<B> {
         ciphertext: &[u8],
         associated_data: &[u8],
     ) -> Result<IncomingMessage> {
-        let plaintext = self.open_envelope(peer, envelope_type, header, ciphertext, associated_data)?;
+        let plaintext =
+            self.open_envelope(peer, envelope_type, header, ciphertext, associated_data)?;
         let body = MessageBody::decode(&plaintext);
 
-        let ad = e2ee::parse_associated_data(associated_data)
-            .ok_or(SdkError::MisattributedMessage)?;
+        let ad =
+            e2ee::parse_associated_data(associated_data).ok_or(SdkError::MisattributedMessage)?;
         if ad.sender_user_id != peer.user_id || ad.sender_device_id != peer.device_id {
             return Err(SdkError::MisattributedMessage);
         }
@@ -459,8 +460,7 @@ impl<B: Backend> NotegramClient<B> {
             }
         }
 
-        let bootstrap =
-            e2ee::parse_signal_bootstrap(header).ok_or(SdkError::BadKeyMaterial)?;
+        let bootstrap = e2ee::parse_signal_bootstrap(header).ok_or(SdkError::BadKeyMaterial)?;
 
         let signed_prekey_priv = self
             .store

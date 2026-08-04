@@ -191,8 +191,7 @@ pub struct ParsedAssociatedData {
 /// Decodes associated data that has already been authenticated by a successful
 /// decryption. Returns `None` if it is not a v1 associated-data blob.
 pub fn parse_associated_data(associated_data: &[u8]) -> Option<ParsedAssociatedData> {
-    let ad: MessageAssociatedData =
-        tl::decode_from(associated_data, tl::Limits::default()).ok()?;
+    let ad: MessageAssociatedData = tl::decode_from(associated_data, tl::Limits::default()).ok()?;
     Some(ParsedAssociatedData {
         sender_user_id: ad.sender_user_id,
         sender_device_id: ad.sender_device_id,

@@ -20,7 +20,6 @@ pub struct Session<S> {
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
-
     pub async fn open(mut stream: S, session_id: u64, route_dc: u32) -> Result<Session<S>> {
         admission::admit(&mut stream, session_id, route_dc).await?;
         let mut state = SecureState::new_client(session_id);
@@ -140,8 +139,8 @@ mod tests {
         auth_key_id, compute_finished, derive_auth_key, transcript_bytes, Transcript,
     };
     use tl::generated::{
-        AuthBeginHandshake, AuthFinishHandshake, AuthHandshakeOk, AuthHandshakeParams, InvokeWithLayer,
-        Ping, Pong,
+        AuthBeginHandshake, AuthFinishHandshake, AuthHandshakeOk, AuthHandshakeParams,
+        InvokeWithLayer, Ping, Pong,
     };
     use tl::{decode_from, encode_to_vec, Limits, TlObject};
     use tokio::io::AsyncWriteExt;
@@ -201,7 +200,6 @@ mod tests {
         server_pub_key_id: i64,
         expect_code: &str,
     ) {
-
         let (_h, init) = read_plain_frame(&mut io, DEFAULT_MAX_FRAME).await.unwrap();
         assert_eq!(init[0], 0, "init tag");
         assert_eq!(wire::u32_le(&init[1..5]), route_dc);
@@ -212,12 +210,16 @@ mod tests {
         ch[1..5].copy_from_slice(&route_dc.to_le_bytes());
         ch[5..13].copy_from_slice(&ts.to_le_bytes());
         ch[13..].copy_from_slice(&cookie);
-        io.write_all(&build_plain_frame(session_id, 1, &ch)).await.unwrap();
+        io.write_all(&build_plain_frame(session_id, 1, &ch))
+            .await
+            .unwrap();
         io.flush().await.unwrap();
         let (_h, auth) = read_plain_frame(&mut io, DEFAULT_MAX_FRAME).await.unwrap();
         assert_eq!(auth[0], 2, "auth tag");
         assert_eq!(&auth[13..], &cookie, "auth echoes cookie");
-        io.write_all(&build_plain_frame(session_id, 3, &[3])).await.unwrap();
+        io.write_all(&build_plain_frame(session_id, 3, &[3]))
+            .await
+            .unwrap();
         io.flush().await.unwrap();
 
         let mut st = SecureState::new_client(session_id);
@@ -227,13 +229,24 @@ mod tests {
         let mut conn = Connection::new(io, st);
 
         let _cfg: HelpGetConfig = recv_req(&mut conn).await;
-        send_obj(&mut conn, &HelpConfig { now: 1_700_000_000, dc_options: vec![] }).await;
+        send_obj(
+            &mut conn,
+            &HelpConfig {
+                now: 1_700_000_000,
+                dc_options: vec![],
+            },
+        )
+        .await;
 
         let sec: AuthSendEmailCode = recv_req(&mut conn).await;
         let email_hash = vec![0xEEu8; 8];
         send_obj(
             &mut conn,
-            &AuthSentCode { email: sec.email.clone(), email_hash: email_hash.clone(), timeout: 60 },
+            &AuthSentCode {
+                email: sec.email.clone(),
+                email_hash: email_hash.clone(),
+                timeout: 60,
+            },
         )
         .await;
 
@@ -243,14 +256,21 @@ mod tests {
         let tmp_token = b"tmp-token-abc".to_vec();
         send_obj(
             &mut conn,
-            &AuthVerified { user_id: 5001, tmp_token: tmp_token.clone(), expires_in: 600 },
+            &AuthVerified {
+                user_id: 5001,
+                tmp_token: tmp_token.clone(),
+                expires_in: 600,
+            },
         )
         .await;
 
         let mut rng = CounterRng(0x9999);
         let (server_eph_priv, server_eph_pub) = x25519_generate(&mut rng);
         let begin: AuthBeginHandshake = recv_req(&mut conn).await;
-        assert_eq!(begin.tmp_token, tmp_token, "begin carries the verified token");
+        assert_eq!(
+            begin.tmp_token, tmp_token,
+            "begin carries the verified token"
+        );
         let client_eph_pub: [u8; 32] = begin.client_eph_pub.clone().try_into().unwrap();
         let t = Transcript {
             tmp_token: begin.tmp_token.clone(),
@@ -309,7 +329,14 @@ mod tests {
         *conn.state_mut() = ast;
 
         let ping: Ping = recv_req(&mut conn).await;
-        send_obj(&mut conn, &Pong { ping_id: ping.ping_id, now: 777 }).await;
+        send_obj(
+            &mut conn,
+            &Pong {
+                ping_id: ping.ping_id,
+                now: 777,
+            },
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -353,13 +380,22 @@ mod tests {
 
         let mut rng = CounterRng(0x00C0_FFEE);
         session
-            .authenticate(&verified, br#"{"device":"test"}"#.to_vec(), &server_ed_pub, &mut rng)
+            .authenticate(
+                &verified,
+                br#"{"device":"test"}"#.to_vec(),
+                &server_ed_pub,
+                &mut rng,
+            )
             .await
             .expect("authenticate");
         assert!(session.is_authenticated());
         assert_eq!(session.user_id(), 5001);
 
-        let pong: Pong = session.rpc_mut().invoke(&Ping { ping_id: 3 }).await.expect("authed ping");
+        let pong: Pong = session
+            .rpc_mut()
+            .invoke(&Ping { ping_id: 3 })
+            .await
+            .expect("authed ping");
         assert_eq!((pong.ping_id, pong.now), (3, 777));
 
         edge.await.unwrap();

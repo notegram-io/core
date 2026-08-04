@@ -13,7 +13,9 @@ fn load() -> Value {
 }
 
 fn b64(v: &Value) -> Vec<u8> {
-    BASE64.decode(v.as_str().expect("expected base64 string")).expect("valid base64")
+    BASE64
+        .decode(v.as_str().expect("expected base64 string"))
+        .expect("valid base64")
 }
 
 fn trust_from(vectors: &Value) -> (Vec<[u8; 32]>, Vec<[u8; 32]>, usize) {
@@ -50,19 +52,43 @@ fn verifies_canonical_go_vector_and_extracts_trusted_keys() {
 
     let verified = verify_prekey_bundle_proof(&raw, &trust).expect("verify canonical proof");
 
-    assert_eq!(verified.user_id, vectors["subjects"]["peer_user_id"].as_i64().unwrap());
-    assert_eq!(verified.device_id, vectors["subjects"]["peer_device_id"].as_i64().unwrap());
-    assert_eq!(verified.device_signing_key.to_vec(), b64(&vectors["peer_device_signing_key"]));
+    assert_eq!(
+        verified.user_id,
+        vectors["subjects"]["peer_user_id"].as_i64().unwrap()
+    );
+    assert_eq!(
+        verified.device_id,
+        vectors["subjects"]["peer_device_id"].as_i64().unwrap()
+    );
+    assert_eq!(
+        verified.device_signing_key.to_vec(),
+        b64(&vectors["peer_device_signing_key"])
+    );
 
     let inner: Value = serde_json::from_slice(&raw).unwrap();
     let receipt = &inner["receipt"];
     assert_eq!(verified.identity_key.to_vec(), b64(&receipt["IdentityKey"]));
-    assert_eq!(verified.signed_pre_key_id, receipt["SignedPreKeyID"].as_i64().unwrap() as i32);
-    assert_eq!(verified.signed_pre_key_pub.to_vec(), b64(&receipt["SignedPreKeyPub"]));
-    assert_eq!(verified.signed_pre_key_sig.to_vec(), b64(&receipt["SignedPreKeySig"]));
-    assert_eq!(verified.one_time_pre_key_id, receipt["OneTimePreKeyID"].as_i64().unwrap() as i32);
     assert_eq!(
-        verified.one_time_pre_key_pub.expect("one-time prekey present").to_vec(),
+        verified.signed_pre_key_id,
+        receipt["SignedPreKeyID"].as_i64().unwrap() as i32
+    );
+    assert_eq!(
+        verified.signed_pre_key_pub.to_vec(),
+        b64(&receipt["SignedPreKeyPub"])
+    );
+    assert_eq!(
+        verified.signed_pre_key_sig.to_vec(),
+        b64(&receipt["SignedPreKeySig"])
+    );
+    assert_eq!(
+        verified.one_time_pre_key_id,
+        receipt["OneTimePreKeyID"].as_i64().unwrap() as i32
+    );
+    assert_eq!(
+        verified
+            .one_time_pre_key_pub
+            .expect("one-time prekey present")
+            .to_vec(),
         b64(&receipt["OneTimePreKeyPub"])
     );
 
@@ -124,7 +150,9 @@ fn tamper_and_expect_err(vectors: &Value, mutate: impl FnOnce(&mut Value)) {
 fn flip_base64_byte(v: &mut Value, path: &[&str]) {
     let mut cur = v;
     for (i, key) in path.iter().enumerate() {
-        cur = cur.get_mut(*key).unwrap_or_else(|| panic!("missing path segment {key}"));
+        cur = cur
+            .get_mut(*key)
+            .unwrap_or_else(|| panic!("missing path segment {key}"));
         let _ = i;
     }
     let mut decoded = BASE64.decode(cur.as_str().unwrap()).unwrap();

@@ -60,7 +60,6 @@ impl<S> Rpc<S> {
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
-
     pub async fn invoke<Req: TlObject, Resp: TlObject>(&mut self, req: &Req) -> Result<Resp> {
         self.send(req).await?;
         self.expect::<Resp>().await
@@ -131,7 +130,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
                 self.pending.extend(it);
                 return Ok(first);
             }
-
         }
     }
 }
@@ -155,7 +153,9 @@ mod tests {
         Connection::new(stream, state)
     }
 
-    async fn read_invoked_ping<S: AsyncRead + AsyncWrite + Unpin>(conn: &mut Connection<S>) -> Ping {
+    async fn read_invoked_ping<S: AsyncRead + AsyncWrite + Unpin>(
+        conn: &mut Connection<S>,
+    ) -> Ping {
         let (_h, frames) = conn.recv_frames().await.unwrap();
         let invoke = decode_from::<InvokeWithLayer>(&frames[0], Limits::default()).unwrap();
         assert_eq!(invoke.layer, LAYER);
@@ -198,7 +198,10 @@ mod tests {
         });
 
         let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(7)));
-        let err = rpc.invoke::<Ping, Pong>(&Ping { ping_id: 1 }).await.unwrap_err();
+        let err = rpc
+            .invoke::<Ping, Pong>(&Ping { ping_id: 1 })
+            .await
+            .unwrap_err();
         match err {
             NetError::Rpc { code, message } => {
                 assert_eq!(code, 420);
@@ -216,8 +219,16 @@ mod tests {
         let handle = tokio::spawn(async move {
             let ping = read_invoked_ping(&mut srv).await;
 
-            let stale = encode_to_vec(&Pong { ping_id: 999, now: 1 }).unwrap();
-            let real = encode_to_vec(&Pong { ping_id: ping.ping_id, now: 2 }).unwrap();
+            let stale = encode_to_vec(&Pong {
+                ping_id: 999,
+                now: 1,
+            })
+            .unwrap();
+            let real = encode_to_vec(&Pong {
+                ping_id: ping.ping_id,
+                now: 2,
+            })
+            .unwrap();
 
             srv.send_frames(&[&stale, &real]).await.unwrap();
         });
@@ -245,7 +256,11 @@ mod tests {
                 pending_count: 1,
             })
             .unwrap();
-            let pong = encode_to_vec(&Pong { ping_id: ping.ping_id, now: 3 }).unwrap();
+            let pong = encode_to_vec(&Pong {
+                ping_id: ping.ping_id,
+                now: 3,
+            })
+            .unwrap();
             srv.send_frames(&[&push, &pong]).await.unwrap();
         });
 
@@ -260,7 +275,6 @@ mod tests {
         assert!(rpc.take_updates().is_empty(), "draining clears the queue");
         handle.await.unwrap();
     }
-
 }
 
 #[cfg(test)]
@@ -280,7 +294,11 @@ mod answer_tests {
 
         let handle = tokio::spawn(async move {
             let _ = srv.recv_frames().await.unwrap();
-            let body = encode_to_vec(&Pong { ping_id: 5, now: 99 }).unwrap();
+            let body = encode_to_vec(&Pong {
+                ping_id: 5,
+                now: 99,
+            })
+            .unwrap();
             let answer = encode_to_vec(&RpcAnswer {
                 req_msg_id: 123456,
                 body,
@@ -309,13 +327,23 @@ mod answer_tests {
                 message: "FLOOD_WAIT".to_string(),
             })
             .unwrap();
-            let answer = encode_to_vec(&RpcAnswer { req_msg_id: 1, body }).unwrap();
+            let answer = encode_to_vec(&RpcAnswer {
+                req_msg_id: 1,
+                body,
+            })
+            .unwrap();
             srv.send_frames(&[&answer]).await.unwrap();
         });
 
         let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(4)));
-        let err = rpc.invoke::<Ping, Pong>(&Ping { ping_id: 1 }).await.unwrap_err();
-        assert!(matches!(err, NetError::Rpc { code: 429, .. }), "got {err:?}");
+        let err = rpc
+            .invoke::<Ping, Pong>(&Ping { ping_id: 1 })
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, NetError::Rpc { code: 429, .. }),
+            "got {err:?}"
+        );
         handle.await.unwrap();
     }
 }

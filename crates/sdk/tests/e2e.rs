@@ -157,7 +157,11 @@ fn one_time_prekey_top_ups_never_reuse_an_id() {
         .map(|k| k.id)
         .collect();
 
-    assert_eq!(ids, vec![1, 2, 3, 4, 5, 6, 7, 8], "ids continue across top-ups");
+    assert_eq!(
+        ids,
+        vec![1, 2, 3, 4, 5, 6, 7, 8],
+        "ids continue across top-ups"
+    );
 
     // Reusing an id would silently overwrite a private key the server still
     // advertises, so those sessions could never be decrypted.
@@ -171,8 +175,8 @@ fn one_time_prekey_top_ups_never_reuse_an_id() {
 fn message_history_is_per_chat_and_chronological() {
     let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
 
-    let msg = |chat: i64, peer: i64, at: i64, id: &str, text: &str, outgoing: bool| {
-        sdk::StoredMessage {
+    let msg =
+        |chat: i64, peer: i64, at: i64, id: &str, text: &str, outgoing: bool| sdk::StoredMessage {
             chat_id: chat,
             peer_user_id: peer,
             outgoing,
@@ -181,14 +185,21 @@ fn message_history_is_per_chat_and_chronological() {
             created_at: at,
             status: sdk::MessageStatus::Sent,
             reply_to: None,
-        }
-    };
+        };
 
     // Saved out of order and across two chats.
-    client.save_message(&msg(10, 1, 300, "c", "third", false)).unwrap();
-    client.save_message(&msg(10, 1, 100, "a", "first", true)).unwrap();
-    client.save_message(&msg(20, 2, 150, "x", "other chat", true)).unwrap();
-    client.save_message(&msg(10, 1, 200, "b", "second", false)).unwrap();
+    client
+        .save_message(&msg(10, 1, 300, "c", "third", false))
+        .unwrap();
+    client
+        .save_message(&msg(10, 1, 100, "a", "first", true))
+        .unwrap();
+    client
+        .save_message(&msg(20, 2, 150, "x", "other chat", true))
+        .unwrap();
+    client
+        .save_message(&msg(10, 1, 200, "b", "second", false))
+        .unwrap();
 
     let chat10: Vec<String> = client
         .list_messages(10, 0)
@@ -209,7 +220,9 @@ fn message_history_is_per_chat_and_chronological() {
     assert_eq!(tail, vec!["second", "third"]);
 
     // Re-saving the same client_msg_id updates in place rather than duplicating.
-    client.save_message(&msg(10, 1, 200, "b", "second (edited)", false)).unwrap();
+    client
+        .save_message(&msg(10, 1, 200, "b", "second (edited)", false))
+        .unwrap();
     assert_eq!(client.list_messages(10, 0).unwrap().len(), 3);
 
     let previews = client.list_chat_previews().unwrap();
@@ -227,8 +240,14 @@ fn rotating_the_signed_prekey_keeps_earlier_messages_decryptable() {
 
     let mut bob = NotegramClient::open(BOB_KEY, MemoryBackend::default()).unwrap();
     bob.create_identity().unwrap();
-    let alice_addr = PeerAddress { user_id: 1, device_id: 1 };
-    let bob_addr = PeerAddress { user_id: 2, device_id: 1 };
+    let alice_addr = PeerAddress {
+        user_id: 1,
+        device_id: 1,
+    };
+    let bob_addr = PeerAddress {
+        user_id: 2,
+        device_id: 1,
+    };
     let otk = first.one_time_pre_keys.first().unwrap();
 
     let envelope = bob
@@ -275,7 +294,10 @@ fn rotating_the_signed_prekey_keeps_earlier_messages_decryptable() {
             &envelope.associated_data,
         )
         .unwrap();
-    assert_eq!(plaintext.body, sdk::MessageBody::Text("sent before rotation".into()));
+    assert_eq!(
+        plaintext.body,
+        sdk::MessageBody::Text("sent before rotation".into())
+    );
 
     // A top-up after rotation must advertise the rotated prekey, not the old one.
     let top_up = alice.prekey_top_up(1).unwrap();
@@ -328,7 +350,12 @@ fn delivery_status_advances_but_never_regresses() {
 
 // Builds a live session pair and returns (alice, bob, alice_addr, bob_addr).
 // Bob is the sender: he encrypts against Alice's published bundle.
-fn session_pair() -> (NotegramClient<MemoryBackend>, NotegramClient<MemoryBackend>, PeerAddress, PeerAddress) {
+fn session_pair() -> (
+    NotegramClient<MemoryBackend>,
+    NotegramClient<MemoryBackend>,
+    PeerAddress,
+    PeerAddress,
+) {
     let mut alice = NotegramClient::open(ALICE_KEY, MemoryBackend::default()).unwrap();
     let alice_identity = alice.create_identity().unwrap();
     let bundle = alice.generate_prekey_bundle(2).unwrap();
@@ -336,8 +363,14 @@ fn session_pair() -> (NotegramClient<MemoryBackend>, NotegramClient<MemoryBacken
     let mut bob = NotegramClient::open(BOB_KEY, MemoryBackend::default()).unwrap();
     bob.create_identity().unwrap();
 
-    let alice_addr = PeerAddress { user_id: 1, device_id: 1 };
-    let bob_addr = PeerAddress { user_id: 2, device_id: 1 };
+    let alice_addr = PeerAddress {
+        user_id: 1,
+        device_id: 1,
+    };
+    let bob_addr = PeerAddress {
+        user_id: 2,
+        device_id: 1,
+    };
     let otk = bundle.one_time_pre_keys.first().unwrap();
 
     let opening = bob
@@ -378,7 +411,16 @@ fn a_reply_names_the_message_it_answers() {
 
     let answered = sdk::message_ref("opening");
     let envelope = bob
-        .encrypt_message(2, 1, alice_addr, 77, "the-reply", &sdk::MessageBody::Text("yes".into()), None, Some(answered))
+        .encrypt_message(
+            2,
+            1,
+            alice_addr,
+            77,
+            "the-reply",
+            &sdk::MessageBody::Text("yes".into()),
+            None,
+            Some(answered),
+        )
         .unwrap();
 
     let opened = alice
@@ -402,10 +444,25 @@ fn a_reply_names_the_message_it_answers() {
 
     // An ordinary message stays an ordinary message.
     let plain = bob
-        .encrypt_message(2, 1, alice_addr, 77, "not-a-reply", &sdk::MessageBody::Text("hi".into()), None, None)
+        .encrypt_message(
+            2,
+            1,
+            alice_addr,
+            77,
+            "not-a-reply",
+            &sdk::MessageBody::Text("hi".into()),
+            None,
+            None,
+        )
         .unwrap();
     let opened = alice
-        .decrypt_message(bob_addr, &plain.envelope_type, &plain.header, &plain.ciphertext, &plain.associated_data)
+        .decrypt_message(
+            bob_addr,
+            &plain.envelope_type,
+            &plain.header,
+            &plain.ciphertext,
+            &plain.associated_data,
+        )
         .unwrap();
     assert_eq!(opened.reply_to, None);
 }
@@ -459,7 +516,9 @@ fn a_read_receipt_travels_as_an_ordinary_encrypted_message() {
             alice_addr,
             77,
             "receipt-1",
-            &sdk::MessageBody::ReadReceipt { up_to_created_at: 1_700_000_000_500 },
+            &sdk::MessageBody::ReadReceipt {
+                up_to_created_at: 1_700_000_000_500,
+            },
             None,
             None,
         )
@@ -476,7 +535,9 @@ fn a_read_receipt_travels_as_an_ordinary_encrypted_message() {
         .unwrap();
     assert_eq!(
         opened.body,
-        sdk::MessageBody::ReadReceipt { up_to_created_at: 1_700_000_000_500 }
+        sdk::MessageBody::ReadReceipt {
+            up_to_created_at: 1_700_000_000_500
+        }
     );
 }
 
@@ -505,7 +566,11 @@ fn a_receipt_marks_everything_sent_up_to_its_watermark() {
     assert_eq!(status("a"), sdk::MessageStatus::Read);
     assert_eq!(status("b"), sdk::MessageStatus::Read);
     assert_eq!(status("c"), sdk::MessageStatus::Sent, "past the watermark");
-    assert_eq!(status("theirs"), sdk::MessageStatus::Sent, "incoming is untouched");
+    assert_eq!(
+        status("theirs"),
+        sdk::MessageStatus::Sent,
+        "incoming is untouched"
+    );
 
     // Replaying the same receipt is a no-op, and a delivery notice arriving
     // late must not walk a read message backwards.

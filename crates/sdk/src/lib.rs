@@ -15,11 +15,11 @@ mod net_ffi;
 #[cfg(feature = "uniffi")]
 uniffi::setup_scaffolding!();
 
+pub use body::MessageBody;
 pub use client::{
     IncomingMessage, NotegramClient, OneTimePreKeyPub, OutgoingEnvelope, PreKeyBundleUpload,
     RecipientPreKeyBundle,
 };
-pub use body::MessageBody;
 pub use identity::{Identity, PublicIdentity};
 pub use messages::{message_ref, MessageStatus, StoredMessage};
 pub use session::{InboundPreKeys, PeerAddress, PreKeyBundle};
@@ -53,7 +53,10 @@ impl core::fmt::Display for SdkError {
             SdkError::BadKeyMaterial => write!(f, "sdk: malformed key material"),
             SdkError::NoIdentity => write!(f, "sdk: no local identity"),
             SdkError::MisattributedMessage => {
-                write!(f, "sdk: associated data does not match the delivered message")
+                write!(
+                    f,
+                    "sdk: associated data does not match the delivered message"
+                )
             }
         }
     }

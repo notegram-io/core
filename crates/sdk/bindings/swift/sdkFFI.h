@@ -251,6 +251,126 @@ typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t, UniffiForeignFutureStr
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_CLONE_NETSESSION
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_CLONE_NETSESSION
+void*_Nonnull uniffi_sdk_fn_clone_netsession(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_FREE_NETSESSION
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_FREE_NETSESSION
+void uniffi_sdk_fn_free_netsession(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_CONSTRUCTOR_NETSESSION_CONNECT
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_CONSTRUCTOR_NETSESSION_CONNECT
+uint64_t uniffi_sdk_fn_constructor_netsession_connect(RustBuffer edge_addr, uint32_t route_dc
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_CONSTRUCTOR_NETSESSION_RESUME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_CONSTRUCTOR_NETSESSION_RESUME
+uint64_t uniffi_sdk_fn_constructor_netsession_resume(RustBuffer edge_addr, uint32_t route_dc, RustBuffer auth_key, uint64_t auth_key_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_ACK_ENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_ACK_ENCRYPTED
+uint64_t uniffi_sdk_fn_method_netsession_ack_encrypted(void*_Nonnull ptr, RustBuffer server_msg_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_AUTHENTICATE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_AUTHENTICATE
+uint64_t uniffi_sdk_fn_method_netsession_authenticate(void*_Nonnull ptr, RustBuffer verified, RustBuffer client_info, RustBuffer server_ed_pub
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_CLAIM_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_CLAIM_USERNAME
+uint64_t uniffi_sdk_fn_method_netsession_claim_username(void*_Nonnull ptr, RustBuffer name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_DEVICES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_DEVICES
+uint64_t uniffi_sdk_fn_method_netsession_get_devices(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_ENCRYPTED_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_ENCRYPTED_MESSAGES
+uint64_t uniffi_sdk_fn_method_netsession_get_encrypted_messages(void*_Nonnull ptr, int32_t limit
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_MY_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_MY_PROFILE
+uint64_t uniffi_sdk_fn_method_netsession_get_my_profile(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_MY_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_MY_USERNAME
+uint64_t uniffi_sdk_fn_method_netsession_get_my_username(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_PEER_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_PEER_BUNDLE
+uint64_t uniffi_sdk_fn_method_netsession_get_peer_bundle(void*_Nonnull ptr, int64_t user_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_PROFILE
+uint64_t uniffi_sdk_fn_method_netsession_get_profile(void*_Nonnull ptr, int64_t user_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_STATUS
+uint64_t uniffi_sdk_fn_method_netsession_keys_status(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_UPLOAD
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_UPLOAD
+uint64_t uniffi_sdk_fn_method_netsession_keys_upload(void*_Nonnull ptr, RustBuffer bundle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_PING
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_PING
+uint64_t uniffi_sdk_fn_method_netsession_ping(void*_Nonnull ptr, int64_t ping_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_RESOLVE_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_RESOLVE_USERNAME
+uint64_t uniffi_sdk_fn_method_netsession_resolve_username(void*_Nonnull ptr, RustBuffer name
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SEND_EMAIL_CODE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SEND_EMAIL_CODE
+uint64_t uniffi_sdk_fn_method_netsession_send_email_code(void*_Nonnull ptr, RustBuffer email, RustBuffer purpose, int64_t device_id
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SEND_ENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SEND_ENCRYPTED
+uint64_t uniffi_sdk_fn_method_netsession_send_encrypted(void*_Nonnull ptr, RustBuffer client_msg_id, int64_t chat_id, RustBuffer schema, RustBuffer suite, RustBuffer recipients, RustBuffer associated_data, RustBuffer forward_info, RustBuffer reply_to
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SET_DEVICE_SIGNING_KEY
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SET_DEVICE_SIGNING_KEY
+uint64_t uniffi_sdk_fn_method_netsession_set_device_signing_key(void*_Nonnull ptr, RustBuffer public_key
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SET_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_SET_PROFILE
+uint64_t uniffi_sdk_fn_method_netsession_set_profile(void*_Nonnull ptr, RustBuffer display_name, RustBuffer bio
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_TAKE_DELIVERY_UPDATES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_TAKE_DELIVERY_UPDATES
+uint64_t uniffi_sdk_fn_method_netsession_take_delivery_updates(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
+uint64_t uniffi_sdk_fn_method_netsession_take_new_message_updates(void*_Nonnull ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_EMAIL_CODE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_EMAIL_CODE
+uint64_t uniffi_sdk_fn_method_netsession_verify_email_code(void*_Nonnull ptr, RustBuffer email, RustBuffer email_hash, RustBuffer code
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_CLONE_NOTEGRAMCORE
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_CLONE_NOTEGRAMCORE
 void*_Nonnull uniffi_sdk_fn_clone_notegramcore(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
@@ -276,9 +396,19 @@ RustBuffer uniffi_sdk_fn_method_notegramcore_create_identity(void*_Nonnull ptr, 
 RustBuffer uniffi_sdk_fn_method_notegramcore_decrypt(void*_Nonnull ptr, RustBuffer peer, RustBuffer message, RustBuffer associated_data, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_DECRYPT_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_DECRYPT_MESSAGE
+RustBuffer uniffi_sdk_fn_method_notegramcore_decrypt_message(void*_Nonnull ptr, RustBuffer peer, RustBuffer envelope_type, RustBuffer header, RustBuffer ciphertext, RustBuffer associated_data, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ENCRYPT
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ENCRYPT
 RustBuffer uniffi_sdk_fn_method_notegramcore_encrypt(void*_Nonnull ptr, RustBuffer peer, RustBuffer plaintext, RustBuffer associated_data, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ENCRYPT_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ENCRYPT_MESSAGE
+RustBuffer uniffi_sdk_fn_method_notegramcore_encrypt_message(void*_Nonnull ptr, int64_t sender_user_id, int64_t sender_device_id, RustBuffer peer, int64_t chat_id, RustBuffer client_msg_id, RustBuffer body, RustBuffer new_session_bundle, RustBuffer reply_to, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ESTABLISH_INBOUND_SESSION
@@ -291,6 +421,11 @@ void uniffi_sdk_fn_method_notegramcore_establish_inbound_session(void*_Nonnull p
 RustBuffer uniffi_sdk_fn_method_notegramcore_establish_outbound_session(void*_Nonnull ptr, RustBuffer peer, RustBuffer bundle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_GENERATE_PREKEY_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_GENERATE_PREKEY_BUNDLE
+RustBuffer uniffi_sdk_fn_method_notegramcore_generate_prekey_bundle(void*_Nonnull ptr, uint32_t one_time_count, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_HAS_SESSION
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_HAS_SESSION
 int8_t uniffi_sdk_fn_method_notegramcore_has_session(void*_Nonnull ptr, RustBuffer peer, RustCallStatus *_Nonnull out_status
@@ -301,9 +436,54 @@ int8_t uniffi_sdk_fn_method_notegramcore_has_session(void*_Nonnull ptr, RustBuff
 RustBuffer uniffi_sdk_fn_method_notegramcore_import_identity(void*_Nonnull ptr, RustBuffer identity_priv, RustBuffer signing_seed, uint32_t registration_id, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_LIST_CHAT_PREVIEWS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_LIST_CHAT_PREVIEWS
+RustBuffer uniffi_sdk_fn_method_notegramcore_list_chat_previews(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_LIST_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_LIST_MESSAGES
+RustBuffer uniffi_sdk_fn_method_notegramcore_list_messages(void*_Nonnull ptr, int64_t chat_id, uint32_t limit, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MARK_MESSAGE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MARK_MESSAGE_STATUS
+int8_t uniffi_sdk_fn_method_notegramcore_mark_message_status(void*_Nonnull ptr, int64_t chat_id, RustBuffer client_msg_id, RustBuffer status, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MARK_READ_UP_TO
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MARK_READ_UP_TO
+uint32_t uniffi_sdk_fn_method_notegramcore_mark_read_up_to(void*_Nonnull ptr, int64_t chat_id, int64_t up_to_created_at, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MESSAGE_REF
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_MESSAGE_REF
+int64_t uniffi_sdk_fn_method_notegramcore_message_ref(void*_Nonnull ptr, RustBuffer client_msg_id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_PREKEY_TOP_UP
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_PREKEY_TOP_UP
+RustBuffer uniffi_sdk_fn_method_notegramcore_prekey_top_up(void*_Nonnull ptr, uint32_t count, RustCallStatus *_Nonnull out_status
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_PUBLIC_IDENTITY
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_PUBLIC_IDENTITY
 RustBuffer uniffi_sdk_fn_method_notegramcore_public_identity(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ROTATE_SIGNED_PREKEY
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_ROTATE_SIGNED_PREKEY
+RustBuffer uniffi_sdk_fn_method_notegramcore_rotate_signed_prekey(void*_Nonnull ptr, uint32_t one_time_count, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
+void uniffi_sdk_fn_method_notegramcore_save_message(void*_Nonnull ptr, RustBuffer message, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_VERIFY_PEER_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_VERIFY_PEER_BUNDLE
+RustBuffer uniffi_sdk_fn_method_notegramcore_verify_peer_bundle(void*_Nonnull ptr, RustBuffer proof, RustBuffer trust, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_SDK_RUSTBUFFER_ALLOC
@@ -586,6 +766,126 @@ void ffi_sdk_rust_future_free_void(uint64_t handle
 void ffi_sdk_rust_future_complete_void(uint64_t handle, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_ACK_ENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_ACK_ENCRYPTED
+uint16_t uniffi_sdk_checksum_method_netsession_ack_encrypted(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_AUTHENTICATE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_AUTHENTICATE
+uint16_t uniffi_sdk_checksum_method_netsession_authenticate(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_CLAIM_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_CLAIM_USERNAME
+uint16_t uniffi_sdk_checksum_method_netsession_claim_username(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_DEVICES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_DEVICES
+uint16_t uniffi_sdk_checksum_method_netsession_get_devices(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_ENCRYPTED_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_ENCRYPTED_MESSAGES
+uint16_t uniffi_sdk_checksum_method_netsession_get_encrypted_messages(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_MY_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_MY_PROFILE
+uint16_t uniffi_sdk_checksum_method_netsession_get_my_profile(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_MY_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_MY_USERNAME
+uint16_t uniffi_sdk_checksum_method_netsession_get_my_username(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_PEER_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_PEER_BUNDLE
+uint16_t uniffi_sdk_checksum_method_netsession_get_peer_bundle(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_PROFILE
+uint16_t uniffi_sdk_checksum_method_netsession_get_profile(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_STATUS
+uint16_t uniffi_sdk_checksum_method_netsession_keys_status(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_UPLOAD
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_UPLOAD
+uint16_t uniffi_sdk_checksum_method_netsession_keys_upload(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_PING
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_PING
+uint16_t uniffi_sdk_checksum_method_netsession_ping(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_RESOLVE_USERNAME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_RESOLVE_USERNAME
+uint16_t uniffi_sdk_checksum_method_netsession_resolve_username(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SEND_EMAIL_CODE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SEND_EMAIL_CODE
+uint16_t uniffi_sdk_checksum_method_netsession_send_email_code(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SEND_ENCRYPTED
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SEND_ENCRYPTED
+uint16_t uniffi_sdk_checksum_method_netsession_send_encrypted(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SET_DEVICE_SIGNING_KEY
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SET_DEVICE_SIGNING_KEY
+uint16_t uniffi_sdk_checksum_method_netsession_set_device_signing_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SET_PROFILE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_SET_PROFILE
+uint16_t uniffi_sdk_checksum_method_netsession_set_profile(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_DELIVERY_UPDATES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_DELIVERY_UPDATES
+uint16_t uniffi_sdk_checksum_method_netsession_take_delivery_updates(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
+uint16_t uniffi_sdk_checksum_method_netsession_take_new_message_updates(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_VERIFY_EMAIL_CODE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_VERIFY_EMAIL_CODE
+uint16_t uniffi_sdk_checksum_method_netsession_verify_email_code(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_CREATE_IDENTITY
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_CREATE_IDENTITY
 uint16_t uniffi_sdk_checksum_method_notegramcore_create_identity(void
@@ -598,9 +898,21 @@ uint16_t uniffi_sdk_checksum_method_notegramcore_decrypt(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_DECRYPT_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_DECRYPT_MESSAGE
+uint16_t uniffi_sdk_checksum_method_notegramcore_decrypt_message(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ENCRYPT
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ENCRYPT
 uint16_t uniffi_sdk_checksum_method_notegramcore_encrypt(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ENCRYPT_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ENCRYPT_MESSAGE
+uint16_t uniffi_sdk_checksum_method_notegramcore_encrypt_message(void
     
 );
 #endif
@@ -616,6 +928,12 @@ uint16_t uniffi_sdk_checksum_method_notegramcore_establish_outbound_session(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_GENERATE_PREKEY_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_GENERATE_PREKEY_BUNDLE
+uint16_t uniffi_sdk_checksum_method_notegramcore_generate_prekey_bundle(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_HAS_SESSION
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_HAS_SESSION
 uint16_t uniffi_sdk_checksum_method_notegramcore_has_session(void
@@ -628,9 +946,75 @@ uint16_t uniffi_sdk_checksum_method_notegramcore_import_identity(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_LIST_CHAT_PREVIEWS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_LIST_CHAT_PREVIEWS
+uint16_t uniffi_sdk_checksum_method_notegramcore_list_chat_previews(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_LIST_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_LIST_MESSAGES
+uint16_t uniffi_sdk_checksum_method_notegramcore_list_messages(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MARK_MESSAGE_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MARK_MESSAGE_STATUS
+uint16_t uniffi_sdk_checksum_method_notegramcore_mark_message_status(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MARK_READ_UP_TO
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MARK_READ_UP_TO
+uint16_t uniffi_sdk_checksum_method_notegramcore_mark_read_up_to(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MESSAGE_REF
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_MESSAGE_REF
+uint16_t uniffi_sdk_checksum_method_notegramcore_message_ref(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_PREKEY_TOP_UP
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_PREKEY_TOP_UP
+uint16_t uniffi_sdk_checksum_method_notegramcore_prekey_top_up(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_PUBLIC_IDENTITY
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_PUBLIC_IDENTITY
 uint16_t uniffi_sdk_checksum_method_notegramcore_public_identity(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ROTATE_SIGNED_PREKEY
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_ROTATE_SIGNED_PREKEY
+uint16_t uniffi_sdk_checksum_method_notegramcore_rotate_signed_prekey(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
+uint16_t uniffi_sdk_checksum_method_notegramcore_save_message(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_VERIFY_PEER_BUNDLE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_VERIFY_PEER_BUNDLE
+uint16_t uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_NETSESSION_CONNECT
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_NETSESSION_CONNECT
+uint16_t uniffi_sdk_checksum_constructor_netsession_connect(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_NETSESSION_RESUME
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_NETSESSION_RESUME
+uint16_t uniffi_sdk_checksum_constructor_netsession_resume(void
     
 );
 #endif

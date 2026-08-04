@@ -40,14 +40,22 @@ impl fmt::Display for DeviceProofError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DeviceProofError::Json(e) => write!(f, "kt: bad proof json: {e}"),
-            DeviceProofError::UnsupportedSchema(s) => write!(f, "kt: unsupported proof schema {s:?}"),
+            DeviceProofError::UnsupportedSchema(s) => {
+                write!(f, "kt: unsupported proof schema {s:?}")
+            }
             DeviceProofError::BadField(w) => write!(f, "kt: bad field: {w}"),
             DeviceProofError::ChainBroken(w) => write!(f, "kt: chain broken: {w}"),
             DeviceProofError::Tampered(w) => write!(f, "kt: tampered: {w}"),
             DeviceProofError::UntrustedSigningKey => write!(f, "kt: untrusted signing public key"),
-            DeviceProofError::WitnessThresholdNotMet => write!(f, "kt: witness signature threshold not met"),
-            DeviceProofError::NoActivePrekeyEntry => write!(f, "kt: no active prekey transparency entry"),
-            DeviceProofError::NoTrustedDeviceSigningKey => write!(f, "kt: no trusted device signing key in transparency log"),
+            DeviceProofError::WitnessThresholdNotMet => {
+                write!(f, "kt: witness signature threshold not met")
+            }
+            DeviceProofError::NoActivePrekeyEntry => {
+                write!(f, "kt: no active prekey transparency entry")
+            }
+            DeviceProofError::NoTrustedDeviceSigningKey => {
+                write!(f, "kt: no trusted device signing key in transparency log")
+            }
         }
     }
 }
@@ -78,7 +86,10 @@ pub struct VerifiedPrekeyBundle {
     pub one_time_pre_key_pub: Option<[u8; 32]>,
 }
 
-pub fn verify_prekey_bundle_proof(raw: &[u8], trust: &TrustAnchors) -> Result<VerifiedPrekeyBundle> {
+pub fn verify_prekey_bundle_proof(
+    raw: &[u8],
+    trust: &TrustAnchors,
+) -> Result<VerifiedPrekeyBundle> {
     let wire: PrekeyBundleProofWire =
         serde_json::from_slice(raw).map_err(|e| DeviceProofError::Json(e.to_string()))?;
     if wire.schema != SCHEMA_V1 {
@@ -110,7 +121,9 @@ pub fn verify_prekey_bundle_proof(raw: &[u8], trust: &TrustAnchors) -> Result<Ve
         || active.signed_pre_key_pub != receipt.signed_pre_key_pub
         || active.signed_pre_key_sig != receipt.signed_pre_key_sig
     {
-        return Err(DeviceProofError::Tampered("receipt/key-transparency mismatch"));
+        return Err(DeviceProofError::Tampered(
+            "receipt/key-transparency mismatch",
+        ));
     }
 
     let fingerprint = prekey_bundle_fingerprint(receipt, checkpoint)?;
@@ -127,18 +140,20 @@ pub fn verify_prekey_bundle_proof(raw: &[u8], trust: &TrustAnchors) -> Result<Ve
         trust.min_witness_signatures,
     )?;
 
-    let signing_entry = latest_active_entry(&wire.key_transparency_entries, EVENT_DEVICE_SIGNING_KEY_SET)?
-        .ok_or(DeviceProofError::NoTrustedDeviceSigningKey)?;
+    let signing_entry =
+        latest_active_entry(&wire.key_transparency_entries, EVENT_DEVICE_SIGNING_KEY_SET)?
+            .ok_or(DeviceProofError::NoTrustedDeviceSigningKey)?;
     let device_signing_key = arr32(&signing_entry.device_signing_key, "device signing key")?;
 
     let identity_key = arr32(&receipt.identity_key, "identity key")?;
     let signed_pre_key_pub = arr32(&receipt.signed_pre_key_pub, "signed prekey pub")?;
     let signed_pre_key_sig = arr64(&receipt.signed_pre_key_sig, "signed prekey sig")?;
-    let one_time_pre_key_pub = if receipt.one_time_pre_key_id > 0 && !receipt.one_time_pre_key_pub.is_empty() {
-        Some(arr32(&receipt.one_time_pre_key_pub, "one-time prekey pub")?)
-    } else {
-        None
-    };
+    let one_time_pre_key_pub =
+        if receipt.one_time_pre_key_id > 0 && !receipt.one_time_pre_key_pub.is_empty() {
+            Some(arr32(&receipt.one_time_pre_key_pub, "one-time prekey pub")?)
+        } else {
+            None
+        };
 
     Ok(VerifiedPrekeyBundle {
         user_id: receipt.peer_user_id,
@@ -422,7 +437,9 @@ fn validate_entry_payload(e: &KeyTransparencyEntryWire) -> Result<()> {
                 || e.signed_pre_key_sig.len() != 64
                 || !e.device_signing_key.is_empty()
             {
-                return Err(DeviceProofError::ChainBroken("prekeys.uploaded.v1 payload shape"));
+                return Err(DeviceProofError::ChainBroken(
+                    "prekeys.uploaded.v1 payload shape",
+                ));
             }
         }
         EVENT_DEVICE_SIGNING_KEY_SET => {
@@ -432,7 +449,9 @@ fn validate_entry_payload(e: &KeyTransparencyEntryWire) -> Result<()> {
                 || !e.signed_pre_key_sig.is_empty()
                 || e.device_signing_key.len() != 32
             {
-                return Err(DeviceProofError::ChainBroken("device_signing_key.set.v1 payload shape"));
+                return Err(DeviceProofError::ChainBroken(
+                    "device_signing_key.set.v1 payload shape",
+                ));
             }
         }
         EVENT_DEVICE_MATERIAL_DELETED => {
@@ -442,10 +461,16 @@ fn validate_entry_payload(e: &KeyTransparencyEntryWire) -> Result<()> {
                 || !e.signed_pre_key_sig.is_empty()
                 || !e.device_signing_key.is_empty()
             {
-                return Err(DeviceProofError::ChainBroken("device_material.deleted.v1 payload shape"));
+                return Err(DeviceProofError::ChainBroken(
+                    "device_material.deleted.v1 payload shape",
+                ));
             }
         }
-        _ => return Err(DeviceProofError::ChainBroken("unsupported key transparency event")),
+        _ => {
+            return Err(DeviceProofError::ChainBroken(
+                "unsupported key transparency event",
+            ))
+        }
     }
     Ok(())
 }
@@ -502,7 +527,13 @@ fn empty_root_hash(user_id: i64, device_id: i64) -> [u8; 32] {
         .finish()
 }
 
-fn root_step_hash(user_id: i64, device_id: i64, sequence: i64, prev_root: &[u8], entry_hash: &[u8]) -> Result<[u8; 32]> {
+fn root_step_hash(
+    user_id: i64,
+    device_id: i64,
+    sequence: i64,
+    prev_root: &[u8],
+    entry_hash: &[u8],
+) -> Result<[u8; 32]> {
     if prev_root.len() != 32 || entry_hash.len() != 32 || sequence <= 0 {
         return Err(DeviceProofError::BadField("root step inputs"));
     }
@@ -516,11 +547,17 @@ fn root_step_hash(user_id: i64, device_id: i64, sequence: i64, prev_root: &[u8],
         .finish())
 }
 
-fn root_hash(user_id: i64, device_id: i64, entries: &[KeyTransparencyEntryWire]) -> Result<[u8; 32]> {
+fn root_hash(
+    user_id: i64,
+    device_id: i64,
+    entries: &[KeyTransparencyEntryWire],
+) -> Result<[u8; 32]> {
     validate_entries(entries)?;
     if let Some(first) = entries.first() {
         if first.user_id != user_id || first.device_id != device_id || first.sequence != 1 {
-            return Err(DeviceProofError::ChainBroken("root hash subject/genesis mismatch"));
+            return Err(DeviceProofError::ChainBroken(
+                "root hash subject/genesis mismatch",
+            ));
         }
     }
     let mut root = empty_root_hash(user_id, device_id);
@@ -538,10 +575,15 @@ fn checkpoint_signing_payload(c: &KeyTransparencyCheckpointWire) -> Result<Vec<u
     }
     if c.entry_count == 0 {
         if c.from_sequence != 0 || c.to_sequence != 0 || !c.latest_entry_hash.is_empty() {
-            return Err(DeviceProofError::BadField("empty checkpoint has non-empty range"));
+            return Err(DeviceProofError::BadField(
+                "empty checkpoint has non-empty range",
+            ));
         }
     } else {
-        if c.from_sequence <= 0 || c.to_sequence < c.from_sequence || c.latest_entry_hash.len() != 32 {
+        if c.from_sequence <= 0
+            || c.to_sequence < c.from_sequence
+            || c.latest_entry_hash.len() != 32
+        {
             return Err(DeviceProofError::BadField("checkpoint range/latest hash"));
         }
     }
@@ -575,12 +617,17 @@ fn verify_checkpoint_signature(c: &KeyTransparencyCheckpointWire) -> Result<()> 
     let pk = arr32(&c.signing_public_key, "checkpoint signing public key")?;
     let sig = arr64(&c.signature, "checkpoint signature")?;
     if !crypto::ed25519_verify(&pk, &payload, &sig) {
-        return Err(DeviceProofError::Tampered("checkpoint signature verification failed"));
+        return Err(DeviceProofError::Tampered(
+            "checkpoint signature verification failed",
+        ));
     }
     Ok(())
 }
 
-fn checkpoint_heads_equal(a: &KeyTransparencyCheckpointWire, b: &KeyTransparencyCheckpointWire) -> bool {
+fn checkpoint_heads_equal(
+    a: &KeyTransparencyCheckpointWire,
+    b: &KeyTransparencyCheckpointWire,
+) -> bool {
     a.user_id == b.user_id
         && a.device_id == b.device_id
         && a.from_sequence == b.from_sequence
@@ -592,7 +639,10 @@ fn checkpoint_heads_equal(a: &KeyTransparencyCheckpointWire, b: &KeyTransparency
         && a.signing_public_key == b.signing_public_key
 }
 
-fn validate_checkpoint_for_entries(c: &KeyTransparencyCheckpointWire, entries: &[KeyTransparencyEntryWire]) -> Result<()> {
+fn validate_checkpoint_for_entries(
+    c: &KeyTransparencyCheckpointWire,
+    entries: &[KeyTransparencyEntryWire],
+) -> Result<()> {
     verify_checkpoint_signature(c)?;
     let root = root_hash(c.user_id, c.device_id, entries)?;
     let (from_sequence, to_sequence, latest_entry_hash) = match entries.last() {
@@ -617,7 +667,9 @@ fn validate_checkpoint_for_entries(c: &KeyTransparencyCheckpointWire, entries: &
         signature: Vec::new(),
     };
     if !checkpoint_heads_equal(c, &expected) {
-        return Err(DeviceProofError::Tampered("checkpoint does not match transparency entries"));
+        return Err(DeviceProofError::Tampered(
+            "checkpoint does not match transparency entries",
+        ));
     }
     Ok(())
 }
@@ -632,29 +684,47 @@ fn verify_consistency_proof(p: &KeyTransparencyConsistencyProofWire) -> Result<(
         return Err(DeviceProofError::BadField("consistency proof range"));
     }
     if p.from_root_hash.len() != 32 || p.to_root_hash.len() != 32 {
-        return Err(DeviceProofError::BadField("consistency proof root hash length"));
+        return Err(DeviceProofError::BadField(
+            "consistency proof root hash length",
+        ));
     }
     if p.suffix_entry_hashes.len() as i64 != p.to_sequence - p.from_sequence {
         return Err(DeviceProofError::BadField("consistency proof suffix count"));
     }
     let mut root = p.from_root_hash.clone();
     for (i, suffix) in p.suffix_entry_hashes.iter().enumerate() {
-        root = root_step_hash(p.user_id, p.device_id, p.from_sequence + i as i64 + 1, &root, &suffix.0)?.to_vec();
+        root = root_step_hash(
+            p.user_id,
+            p.device_id,
+            p.from_sequence + i as i64 + 1,
+            &root,
+            &suffix.0,
+        )?
+        .to_vec();
     }
     if root != p.to_root_hash {
-        return Err(DeviceProofError::Tampered("consistency proof root mismatch"));
+        return Err(DeviceProofError::Tampered(
+            "consistency proof root mismatch",
+        ));
     }
     Ok(())
 }
 
-fn verify_consistency_proof_for_checkpoint(p: &KeyTransparencyConsistencyProofWire, c: &KeyTransparencyCheckpointWire) -> Result<()> {
+fn verify_consistency_proof_for_checkpoint(
+    p: &KeyTransparencyConsistencyProofWire,
+    c: &KeyTransparencyCheckpointWire,
+) -> Result<()> {
     verify_checkpoint_signature(c)?;
     verify_consistency_proof(p)?;
     if p.user_id != c.user_id || p.device_id != c.device_id {
-        return Err(DeviceProofError::BadField("consistency proof subject vs checkpoint"));
+        return Err(DeviceProofError::BadField(
+            "consistency proof subject vs checkpoint",
+        ));
     }
     if p.to_sequence != c.to_sequence || p.to_root_hash != c.root_hash {
-        return Err(DeviceProofError::Tampered("consistency proof head vs checkpoint"));
+        return Err(DeviceProofError::Tampered(
+            "consistency proof head vs checkpoint",
+        ));
     }
     Ok(())
 }
@@ -682,7 +752,9 @@ fn witness_signing_payload(s: &KeyTransparencyWitnessSignatureWire) -> Result<Ve
         return Err(DeviceProofError::BadField("witness id/public key"));
     }
     if s.witness_id != format!("ed25519:{}", hex_encode(&s.witness_public_key)) {
-        return Err(DeviceProofError::BadField("witness id does not match public key"));
+        return Err(DeviceProofError::BadField(
+            "witness id does not match public key",
+        ));
     }
     if s.signature_scheme != WITNESS_SIGNATURE_SCHEME_V1 {
         return Err(DeviceProofError::BadField("witness signature scheme"));
@@ -710,12 +782,17 @@ fn verify_witness_signature(s: &KeyTransparencyWitnessSignatureWire) -> Result<(
     let pk = arr32(&s.witness_public_key, "witness public key")?;
     let sig = arr64(&s.signature, "witness signature")?;
     if !crypto::ed25519_verify(&pk, &payload, &sig) {
-        return Err(DeviceProofError::Tampered("witness signature verification failed"));
+        return Err(DeviceProofError::Tampered(
+            "witness signature verification failed",
+        ));
     }
     Ok(())
 }
 
-fn verify_witness_signature_for_checkpoint(s: &KeyTransparencyWitnessSignatureWire, c: &KeyTransparencyCheckpointWire) -> Result<()> {
+fn verify_witness_signature_for_checkpoint(
+    s: &KeyTransparencyWitnessSignatureWire,
+    c: &KeyTransparencyCheckpointWire,
+) -> Result<()> {
     let checkpoint_hash = checkpoint_signature_hash(c)?;
     verify_witness_signature(s)?;
     if s.user_id != c.user_id
@@ -724,7 +801,9 @@ fn verify_witness_signature_for_checkpoint(s: &KeyTransparencyWitnessSignatureWi
         || s.root_hash != c.root_hash
         || s.checkpoint_signature_hash != checkpoint_hash
     {
-        return Err(DeviceProofError::Tampered("witness signature does not match checkpoint"));
+        return Err(DeviceProofError::Tampered(
+            "witness signature does not match checkpoint",
+        ));
     }
     Ok(())
 }
@@ -736,10 +815,14 @@ fn validate_witness_set(
     min_signatures: usize,
 ) -> Result<()> {
     if min_signatures > 0 && trusted.is_empty() {
-        return Err(DeviceProofError::BadField("witness threshold requires trusted public keys"));
+        return Err(DeviceProofError::BadField(
+            "witness threshold requires trusted public keys",
+        ));
     }
     if min_signatures > trusted.len() {
-        return Err(DeviceProofError::BadField("witness threshold exceeds trusted key count"));
+        return Err(DeviceProofError::BadField(
+            "witness threshold exceeds trusted key count",
+        ));
     }
     let mut seen: Vec<[u8; 32]> = Vec::new();
     for s in signatures {
@@ -766,11 +849,17 @@ fn receipt_signing_payload(r: &PrekeyBundleReceiptWire) -> Result<Vec<u8>> {
     if r.receipt_id.is_empty() {
         return Err(DeviceProofError::BadField("receipt id"));
     }
-    if r.requester_user_id == 0 || r.requester_device_id == 0 || r.peer_user_id == 0 || r.peer_device_id == 0 {
+    if r.requester_user_id == 0
+        || r.requester_device_id == 0
+        || r.peer_user_id == 0
+        || r.peer_device_id == 0
+    {
         return Err(DeviceProofError::BadField("receipt subject"));
     }
     if r.bundle_fingerprint.len() != 32 {
-        return Err(DeviceProofError::BadField("receipt bundle fingerprint length"));
+        return Err(DeviceProofError::BadField(
+            "receipt bundle fingerprint length",
+        ));
     }
     if r.key_transparency_to_sequence <= 0 {
         return Err(DeviceProofError::BadField("receipt kt sequence"));
@@ -779,7 +868,9 @@ fn receipt_signing_payload(r: &PrekeyBundleReceiptWire) -> Result<Vec<u8>> {
         return Err(DeviceProofError::BadField("receipt kt hash length"));
     }
     if r.key_transparency_checkpoint_sig.len() != 64 {
-        return Err(DeviceProofError::BadField("receipt kt checkpoint sig length"));
+        return Err(DeviceProofError::BadField(
+            "receipt kt checkpoint sig length",
+        ));
     }
     if r.signature_scheme != RECEIPT_SIGNATURE_SCHEME_V1 {
         return Err(DeviceProofError::BadField("receipt signature scheme"));
@@ -821,12 +912,17 @@ fn verify_receipt_signature(r: &PrekeyBundleReceiptWire) -> Result<()> {
     let pk = arr32(&r.signing_public_key, "receipt signing public key")?;
     let sig = arr64(&r.signature, "receipt signature")?;
     if !crypto::ed25519_verify(&pk, &payload, &sig) {
-        return Err(DeviceProofError::Tampered("receipt signature verification failed"));
+        return Err(DeviceProofError::Tampered(
+            "receipt signature verification failed",
+        ));
     }
     Ok(())
 }
 
-fn prekey_bundle_fingerprint(r: &PrekeyBundleReceiptWire, c: &KeyTransparencyCheckpointWire) -> Result<Vec<u8>> {
+fn prekey_bundle_fingerprint(
+    r: &PrekeyBundleReceiptWire,
+    c: &KeyTransparencyCheckpointWire,
+) -> Result<Vec<u8>> {
     if r.peer_user_id == 0
         || r.peer_device_id == 0
         || r.identity_key.len() != 32

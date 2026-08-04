@@ -194,12 +194,18 @@ impl Reader<'_> {
     }
 
     fn i64(&mut self) -> Result<i64, SdkError> {
-        let raw: [u8; 8] = self.take(8)?.try_into().map_err(|_| SdkError::BadKeyMaterial)?;
+        let raw: [u8; 8] = self
+            .take(8)?
+            .try_into()
+            .map_err(|_| SdkError::BadKeyMaterial)?;
         Ok(i64::from_le_bytes(raw))
     }
 
     fn string(&mut self) -> Result<String, SdkError> {
-        let raw: [u8; 4] = self.take(4)?.try_into().map_err(|_| SdkError::BadKeyMaterial)?;
+        let raw: [u8; 4] = self
+            .take(4)?
+            .try_into()
+            .map_err(|_| SdkError::BadKeyMaterial)?;
         let len = u32::from_le_bytes(raw) as usize;
         let bytes = self.take(len)?.to_vec();
         String::from_utf8(bytes).map_err(|_| SdkError::BadKeyMaterial)
@@ -262,14 +268,29 @@ mod tests {
     fn status_survives_a_roundtrip_and_only_moves_forward() {
         let mut msg = sample();
         msg.status = MessageStatus::Delivered;
-        assert_eq!(decode_message(&encode_message(&msg)).unwrap().status, MessageStatus::Delivered);
+        assert_eq!(
+            decode_message(&encode_message(&msg)).unwrap().status,
+            MessageStatus::Delivered
+        );
 
-        assert!(status_advances(MessageStatus::Sent, MessageStatus::Delivered));
-        assert!(status_advances(MessageStatus::Delivered, MessageStatus::Read));
+        assert!(status_advances(
+            MessageStatus::Sent,
+            MessageStatus::Delivered
+        ));
+        assert!(status_advances(
+            MessageStatus::Delivered,
+            MessageStatus::Read
+        ));
         // A delivery notice can land after a read receipt; applying it would
         // visibly downgrade the message.
-        assert!(!status_advances(MessageStatus::Read, MessageStatus::Delivered));
-        assert!(!status_advances(MessageStatus::Delivered, MessageStatus::Delivered));
+        assert!(!status_advances(
+            MessageStatus::Read,
+            MessageStatus::Delivered
+        ));
+        assert!(!status_advances(
+            MessageStatus::Delivered,
+            MessageStatus::Delivered
+        ));
     }
 
     #[test]

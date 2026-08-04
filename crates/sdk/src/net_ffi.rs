@@ -233,15 +233,16 @@ async fn dial_tls(addr: &str) -> Result<Tls, FfiNetError> {
         .rsplit_once(':')
         .map(|(h, _)| h.to_string())
         .unwrap_or_else(|| addr.to_string());
-    let tcp = TcpStream::connect(addr).await.map_err(|_| FfiNetError::Io)?;
-    let config = ClientConfig::builder_with_provider(Arc::new(
-        rustls::crypto::ring::default_provider(),
-    ))
-    .with_safe_default_protocol_versions()
-    .map_err(|_| FfiNetError::Tls)?
-    .dangerous()
-    .with_custom_certificate_verifier(Arc::new(AcceptAnyCert))
-    .with_no_client_auth();
+    let tcp = TcpStream::connect(addr)
+        .await
+        .map_err(|_| FfiNetError::Io)?;
+    let config =
+        ClientConfig::builder_with_provider(Arc::new(rustls::crypto::ring::default_provider()))
+            .with_safe_default_protocol_versions()
+            .map_err(|_| FfiNetError::Tls)?
+            .dangerous()
+            .with_custom_certificate_verifier(Arc::new(AcceptAnyCert))
+            .with_no_client_auth();
     let connector = TlsConnector::from(Arc::new(config));
     let domain = ServerName::try_from(host).map_err(|_| FfiNetError::BadInput)?;
     connector
@@ -368,7 +369,13 @@ impl NetSession {
     }
 
     pub async fn claim_username(&self, name: String) -> Result<String, FfiNetError> {
-        Ok(self.inner.lock().await.claim_username(&name).await?.username)
+        Ok(self
+            .inner
+            .lock()
+            .await
+            .claim_username(&name)
+            .await?
+            .username)
     }
 
     pub async fn get_profile(&self, user_id: i64) -> Result<FfiProfile, FfiNetError> {
@@ -459,10 +466,7 @@ impl NetSession {
         })
     }
 
-    pub async fn set_device_signing_key(
-        &self,
-        public_key: Vec<u8>,
-    ) -> Result<i64, FfiNetError> {
+    pub async fn set_device_signing_key(&self, public_key: Vec<u8>) -> Result<i64, FfiNetError> {
         let r = self
             .inner
             .lock()

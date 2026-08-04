@@ -1,6 +1,5 @@
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use tl::TlObject;
 use tl::generated::{
     AuthDevices, AuthGetDevices, DirectoryClaimUsername, DirectoryGetMyProfile,
     DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
@@ -10,12 +9,12 @@ use tl::generated::{
     MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesGetEncrypted, MessagesSendEncrypted,
     OneTimePreKey, Ping, Pong, UpdateMessageDelivered, UpdateNewMessages,
 };
+use tl::TlObject;
 
 use crate::error::Result;
 use crate::session::Session;
 
 impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
-
     pub async fn ping(&mut self, ping_id: i64) -> Result<Pong> {
         self.rpc_mut().invoke(&Ping { ping_id }).await
     }
@@ -96,9 +95,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
     }
 
     pub async fn get_peer_bundle(&mut self, user_id: i64) -> Result<KeysPeerBundle> {
-        self.rpc_mut()
-            .invoke(&KeysGetPeerBundle { user_id })
-            .await
+        self.rpc_mut().invoke(&KeysGetPeerBundle { user_id }).await
     }
 
     #[allow(clippy::too_many_arguments)]

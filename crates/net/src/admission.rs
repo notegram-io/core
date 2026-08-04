@@ -55,7 +55,11 @@ pub async fn admit<S: AsyncRead + AsyncWrite + Unpin>(
         return Err(NetError::Admission("challenge route dc mismatch"));
     }
 
-    let auth = build_plain_frame(hdr.session_id, hdr.seq_no.wrapping_add(1), &build_auth(dc, ts, &cookie));
+    let auth = build_plain_frame(
+        hdr.session_id,
+        hdr.seq_no.wrapping_add(1),
+        &build_auth(dc, ts, &cookie),
+    );
     stream.write_all(&auth).await?;
     stream.flush().await?;
 
@@ -92,7 +96,10 @@ mod tests {
         assert_eq!(wire::u64_le(&auth[5..13]), ts);
         assert_eq!(&auth[13..], &cookie);
         assert_eq!(auth_hdr.seq_no, 10, "auth seq must be challenge seq + 1");
-        assert_eq!(auth_hdr.session_id, 4242, "auth adopts the challenge session id");
+        assert_eq!(
+            auth_hdr.session_id, 4242,
+            "auth adopts the challenge session id"
+        );
 
         let ok = build_plain_frame(4242, 11, &[MSG_OK]);
         stream.write_all(&ok).await.unwrap();
@@ -112,7 +119,9 @@ mod tests {
         let (mut client, mut server) = tokio::io::duplex(4096);
 
         let edge = tokio::spawn(async move {
-            let _ = read_plain_frame(&mut server, DEFAULT_MAX_FRAME).await.unwrap();
+            let _ = read_plain_frame(&mut server, DEFAULT_MAX_FRAME)
+                .await
+                .unwrap();
             let mut challenge = [0u8; CHALLENGE_LEN];
             challenge[0] = MSG_CHALLENGE;
             challenge[1..5].copy_from_slice(&2u32.to_le_bytes());

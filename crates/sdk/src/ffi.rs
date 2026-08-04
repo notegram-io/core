@@ -2,8 +2,8 @@ use std::sync::Mutex;
 
 use crate::{
     message_ref as sdk_message_ref, Identity, InboundPreKeys, MessageBody, MessageStatus,
-    NotegramClient,
-    PeerAddress, PreKeyBundle, PublicIdentity, RecipientPreKeyBundle, SdkError, StoredMessage,
+    NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity, RecipientPreKeyBundle, SdkError,
+    StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -38,7 +38,9 @@ impl core::fmt::Display for FfiError {
                 write!(f, "notegram: message does not match its claimed sender")
             }
             FfiError::BadInput => write!(f, "notegram: argument had wrong length"),
-            FfiError::UntrustedPeerBundleProof(w) => write!(f, "notegram: peer bundle proof rejected: {w}"),
+            FfiError::UntrustedPeerBundleProof(w) => {
+                write!(f, "notegram: peer bundle proof rejected: {w}")
+            }
         }
     }
 }
@@ -182,9 +184,13 @@ impl From<FfiMessageStatus> for MessageStatus {
 /// like any other message, so the server never learns that a chat was read.
 #[derive(uniffi::Enum)]
 pub enum FfiMessageBody {
-    Text { text: String },
+    Text {
+        text: String,
+    },
     /// Everything up to this timestamp has been read by the peer.
-    ReadReceipt { up_to_created_at: i64 },
+    ReadReceipt {
+        up_to_created_at: i64,
+    },
 }
 
 impl From<MessageBody> for FfiMessageBody {
@@ -461,10 +467,7 @@ impl NotegramCore {
     /// prekey unchanged (the server rejects a changed one under the same id)
     /// and only the one-time keys are new, with ids continuing the sequence so
     /// nothing the server still advertises is invalidated.
-    pub fn prekey_top_up(
-        &self,
-        count: u32,
-    ) -> Result<crate::net_ffi::FfiPrekeyUpload, FfiError> {
+    pub fn prekey_top_up(&self, count: u32) -> Result<crate::net_ffi::FfiPrekeyUpload, FfiError> {
         let b = self.lock().prekey_top_up(count)?;
         Ok(crate::net_ffi::FfiPrekeyUpload {
             identity_key: b.identity_key.to_vec(),

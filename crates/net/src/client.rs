@@ -22,7 +22,6 @@ pub struct Client<S: AsyncWrite + Unpin> {
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Client<S> {
-
     pub fn from_session(session: Session<S>) -> Self {
         let conn = session.into_rpc().into_connection();
         let state = conn.state().clone();
@@ -51,8 +50,11 @@ impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Client<S> {
         let _guard = self.invoke_lock.lock().await;
 
         let raw = encode_to_vec(req).map_err(|_| NetError::Encode)?;
-        let frame = encode_to_vec(&InvokeWithLayer { layer: LAYER, query: raw })
-            .map_err(|_| NetError::Encode)?;
+        let frame = encode_to_vec(&InvokeWithLayer {
+            layer: LAYER,
+            query: raw,
+        })
+        .map_err(|_| NetError::Encode)?;
 
         let (tx, rx) = oneshot::channel();
         *self.pending.lock().await = Some((Resp::CTOR, tx));
@@ -138,9 +140,17 @@ mod tests {
             let inv = decode_from::<InvokeWithLayer>(&frames[0], Limits::default()).unwrap();
             let ping = decode_from::<Ping>(&inv.query, Limits::default()).unwrap();
 
-            let push = encode_to_vec(&HelpConfig { now: 7, dc_options: vec![] }).unwrap();
+            let push = encode_to_vec(&HelpConfig {
+                now: 7,
+                dc_options: vec![],
+            })
+            .unwrap();
             srv.send_frames(&[&push]).await.unwrap();
-            let pong = encode_to_vec(&Pong { ping_id: ping.ping_id, now: 42 }).unwrap();
+            let pong = encode_to_vec(&Pong {
+                ping_id: ping.ping_id,
+                now: 42,
+            })
+            .unwrap();
             srv.send_frames(&[&pong]).await.unwrap();
         });
 
@@ -149,7 +159,11 @@ mod tests {
         assert_eq!((pong.ping_id, pong.now), (9, 42));
 
         let update = client.next_update().await.expect("update");
-        assert_eq!(wire::u32_le(&update[0..4]), HelpConfig::CTOR, "push reached updates");
+        assert_eq!(
+            wire::u32_le(&update[0..4]),
+            HelpConfig::CTOR,
+            "push reached updates"
+        );
 
         server.await.unwrap();
     }
