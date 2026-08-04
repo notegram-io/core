@@ -614,6 +614,22 @@ impl NetSession {
         self.inner.lock().await.pending_update_kinds()
     }
 
+    /// Which of our own messages every recipient has already collected. Asked
+    /// for rather than waited on: the delivery notice is pushed once, so a
+    /// client that missed it would never learn the message landed.
+    pub async fn delivery_status(
+        &self,
+        client_msg_ids: Vec<String>,
+    ) -> Result<Vec<String>, FfiNetError> {
+        let r = self
+            .inner
+            .lock()
+            .await
+            .delivery_status(client_msg_ids)
+            .await?;
+        Ok(r.delivered)
+    }
+
     pub async fn ack_encrypted(&self, server_msg_id: String) -> Result<bool, FfiNetError> {
         let r = self
             .inner

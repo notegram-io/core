@@ -227,6 +227,13 @@ pub struct FfiDecryptedMessage {
     pub reply_to: Option<i64>,
 }
 
+/// One of our own messages that has not been confirmed delivered yet.
+#[derive(uniffi::Record)]
+pub struct FfiUndelivered {
+    pub chat_id: i64,
+    pub client_msg_id: String,
+}
+
 /// A message in local history. The server keeps only ciphertext and drops it on
 /// ack, so this is the durable copy of a conversation.
 #[derive(uniffi::Record)]
@@ -526,6 +533,20 @@ impl NotegramCore {
         Ok(self
             .lock()
             .mark_message_status(chat_id, &client_msg_id, status.into())?)
+    }
+
+    /// Our own messages still waiting for confirmation, as (chat_id, client_msg_id).
+    /// Feed the ids to `NetSession.delivery_status` and mark whatever comes back.
+    pub fn undelivered_messages(&self, limit: u32) -> Result<Vec<FfiUndelivered>, FfiError> {
+        Ok(self
+            .lock()
+            .undelivered_messages(limit)?
+            .into_iter()
+            .map(|(chat_id, client_msg_id)| FfiUndelivered {
+                chat_id,
+                client_msg_id,
+            })
+            .collect())
     }
 
     /// Applies a peer's read receipt to our own messages in that chat. Returns

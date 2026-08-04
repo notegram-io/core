@@ -5,9 +5,10 @@ use tl::generated::{
     DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
     DirectoryResolved, DirectorySetProfile, DirectoryUsername, KeysDeviceSigningKey,
     KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
-    KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesEncryptedAcked, MessagesEncryptedBatch,
-    MessagesEncryptedRecipient, MessagesEncryptedSent, MessagesGetEncrypted, MessagesSendEncrypted,
-    OneTimePreKey, Ping, Pong, UpdateMessageDelivered, UpdateNewMessages,
+    KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesDeliveryStatus, MessagesEncryptedAcked,
+    MessagesEncryptedBatch, MessagesEncryptedRecipient, MessagesEncryptedSent,
+    MessagesGetDeliveryStatus, MessagesGetEncrypted, MessagesSendEncrypted, OneTimePreKey, Ping,
+    Pong, UpdateMessageDelivered, UpdateNewMessages,
 };
 use tl::TlObject;
 
@@ -176,6 +177,21 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         }
         self.rpc_mut().restore_updates(keep);
         wanted
+    }
+
+    /// Which of our own messages every recipient has already collected.
+    ///
+    /// The delivery notice is pushed once and lost if the link drops in that
+    /// instant, so the same fact is asked for here instead of relied upon.
+    pub async fn delivery_status(
+        &mut self,
+        client_msg_ids: Vec<String>,
+    ) -> Result<MessagesDeliveryStatus> {
+        self.rpc_mut()
+            .invoke(&MessagesGetDeliveryStatus {
+                client_msg_i_ds: client_msg_ids,
+            })
+            .await
     }
 
     pub async fn ack_encrypted(&mut self, server_msg_id: &str) -> Result<MessagesEncryptedAcked> {

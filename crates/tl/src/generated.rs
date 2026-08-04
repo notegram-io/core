@@ -3789,6 +3789,90 @@ impl TlObject for MessagesAckEncrypted {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesDeliveredResult {
+    pub delivered: Vec<String>,
+}
+
+impl TlObject for MessagesDeliveredResult {
+    const CTOR: u32 = 0xd1a20005;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.delivered;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let delivered = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { delivered })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesDeliveryStatus {
+    pub delivered: Vec<String>,
+}
+
+impl TlObject for MessagesDeliveryStatus {
+    const CTOR: u32 = 0x8c1f2d05;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.delivered;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let delivered = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { delivered })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessagesEncryptedAcked {
     pub server_msg_id: String,
     pub deleted: bool,
@@ -4048,6 +4132,48 @@ impl TlObject for MessagesEncryptedSent {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesGetDeliveryStatus {
+    pub client_msg_i_ds: Vec<String>,
+}
+
+impl TlObject for MessagesGetDeliveryStatus {
+    const CTOR: u32 = 0x3b7e4a12;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.client_msg_i_ds;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let client_msg_i_ds = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { client_msg_i_ds })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessagesGetEncrypted {
     pub limit: i32,
 }
@@ -4153,6 +4279,58 @@ impl TlObject for MessagesPersisted {
             server_msg_id,
             created_at,
             recipient_count,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesQueryDelivered {
+    pub sender_user_id: i64,
+    pub sender_device_id: i64,
+    pub client_msg_i_ds: Vec<String>,
+}
+
+impl TlObject for MessagesQueryDelivered {
+    const CTOR: u32 = 0xd1a20004;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.sender_user_id);
+        e.long(self.sender_device_id);
+        {
+            let __v = &self.client_msg_i_ds;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let sender_user_id = d.long()?;
+        let sender_device_id = d.long()?;
+        let client_msg_i_ds = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self {
+            sender_user_id,
+            sender_device_id,
+            client_msg_i_ds,
         })
     }
 }

@@ -809,6 +809,12 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -842,6 +848,8 @@ internal interface UniffiLib : Library {
     ): Long
     fun uniffi_sdk_fn_method_netsession_claim_username(`ptr`: Pointer,`name`: RustBuffer.ByValue,
     ): Long
+    fun uniffi_sdk_fn_method_netsession_delivery_status(`ptr`: Pointer,`clientMsgIds`: RustBuffer.ByValue,
+    ): Long
     fun uniffi_sdk_fn_method_netsession_get_devices(`ptr`: Pointer,
     ): Long
     fun uniffi_sdk_fn_method_netsession_get_encrypted_messages(`ptr`: Pointer,`limit`: Int,
@@ -857,6 +865,8 @@ internal interface UniffiLib : Library {
     fun uniffi_sdk_fn_method_netsession_keys_status(`ptr`: Pointer,
     ): Long
     fun uniffi_sdk_fn_method_netsession_keys_upload(`ptr`: Pointer,`bundle`: RustBuffer.ByValue,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_pending_update_kinds(`ptr`: Pointer,
     ): Long
     fun uniffi_sdk_fn_method_netsession_ping(`ptr`: Pointer,`pingId`: Long,
     ): Long
@@ -920,6 +930,8 @@ internal interface UniffiLib : Library {
     ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_save_message(`ptr`: Pointer,`message`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    fun uniffi_sdk_fn_method_notegramcore_undelivered_messages(`ptr`: Pointer,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
     fun uniffi_sdk_fn_method_notegramcore_verify_peer_bundle(`ptr`: Pointer,`proof`: RustBuffer.ByValue,`trust`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
     fun ffi_sdk_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
@@ -1040,6 +1052,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_sdk_checksum_method_netsession_claim_username(
     ): Short
+    fun uniffi_sdk_checksum_method_netsession_delivery_status(
+    ): Short
     fun uniffi_sdk_checksum_method_netsession_get_devices(
     ): Short
     fun uniffi_sdk_checksum_method_netsession_get_encrypted_messages(
@@ -1055,6 +1069,8 @@ internal interface UniffiLib : Library {
     fun uniffi_sdk_checksum_method_netsession_keys_status(
     ): Short
     fun uniffi_sdk_checksum_method_netsession_keys_upload(
+    ): Short
+    fun uniffi_sdk_checksum_method_netsession_pending_update_kinds(
     ): Short
     fun uniffi_sdk_checksum_method_netsession_ping(
     ): Short
@@ -1112,6 +1128,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_save_message(
     ): Short
+    fun uniffi_sdk_checksum_method_notegramcore_undelivered_messages(
+    ): Short
     fun uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle(
     ): Short
     fun uniffi_sdk_checksum_constructor_netsession_connect(
@@ -1146,6 +1164,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_sdk_checksum_method_netsession_claim_username() != 21753.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_sdk_checksum_method_netsession_delivery_status() != 19618.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_sdk_checksum_method_netsession_get_devices() != 18671.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1168,6 +1189,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_netsession_keys_upload() != 6244.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_pending_update_kinds() != 26679.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_netsession_ping() != 28737.toShort()) {
@@ -1252,6 +1276,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_notegramcore_save_message() != 52248.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_notegramcore_undelivered_messages() != 39073.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle() != 27541.toShort()) {
@@ -1714,6 +1741,13 @@ public interface NetSessionInterface {
     
     suspend fun `claimUsername`(`name`: kotlin.String): kotlin.String
     
+    /**
+     * Which of our own messages every recipient has already collected. Asked
+     * for rather than waited on: the delivery notice is pushed once, so a
+     * client that missed it would never learn the message landed.
+     */
+    suspend fun `deliveryStatus`(`clientMsgIds`: List<kotlin.String>): List<kotlin.String>
+    
     suspend fun `getDevices`(): List<FfiDevice>
     
     suspend fun `getEncryptedMessages`(`limit`: kotlin.Int): List<FfiIncomingMessage>
@@ -1729,6 +1763,13 @@ public interface NetSessionInterface {
     suspend fun `keysStatus`(): FfiKeysStatus
     
     suspend fun `keysUpload`(`bundle`: FfiPrekeyUpload): kotlin.Long
+    
+    /**
+     * Constructor ids of the notices sitting in the queue, without consuming
+     * them. A notice this client does not recognise is otherwise silent, and
+     * indistinguishable from one that never arrived.
+     */
+    suspend fun `pendingUpdateKinds`(): List<kotlin.UInt>
     
     suspend fun `ping`(`pingId`: kotlin.Long): kotlin.Long
     
@@ -1910,6 +1951,32 @@ open class NetSession: Disposable, AutoCloseable, NetSessionInterface {
     }
 
     
+    /**
+     * Which of our own messages every recipient has already collected. Asked
+     * for rather than waited on: the delivery notice is pushed once, so a
+     * client that missed it would never learn the message landed.
+     */
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `deliveryStatus`(`clientMsgIds`: List<kotlin.String>) : List<kotlin.String> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_delivery_status(
+                thisPtr,
+                FfiConverterSequenceString.lower(`clientMsgIds`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceString.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
+    )
+    }
+
+    
     @Throws(FfiNetException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `getDevices`() : List<FfiDevice> {
@@ -2074,6 +2141,31 @@ open class NetSession: Disposable, AutoCloseable, NetSessionInterface {
         { FfiConverterLong.lift(it) },
         // Error FFI converter
         FfiNetException.ErrorHandler,
+    )
+    }
+
+    
+    /**
+     * Constructor ids of the notices sitting in the queue, without consuming
+     * them. A notice this client does not recognise is otherwise silent, and
+     * indistinguishable from one that never arrived.
+     */
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `pendingUpdateKinds`() : List<kotlin.UInt> {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_pending_update_kinds(
+                thisPtr,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterSequenceUInt.lift(it) },
+        // Error FFI converter
+        UniffiNullRustCallStatusErrorHandler,
     )
     }
 
@@ -2525,6 +2617,12 @@ public interface NotegramCoreInterface {
     fun `saveMessage`(`message`: FfiStoredMessage)
     
     /**
+     * Our own messages still waiting for confirmation, as (chat_id, client_msg_id).
+     * Feed the ids to `NetSession.delivery_status` and mark whatever comes back.
+     */
+    fun `undeliveredMessages`(`limit`: kotlin.UInt): List<FfiUndelivered>
+    
+    /**
      * Verify a peer's `PrekeyBundleProof` (the `proof` field of a
      * `KeysPeerBundle` device entry) against pinned key-transparency trust
      * anchors, and check the signed-prekey signature against the trusted
@@ -2899,6 +2997,23 @@ open class NotegramCore: Disposable, AutoCloseable, NotegramCoreInterface {
 }
     }
     
+    
+
+    
+    /**
+     * Our own messages still waiting for confirmation, as (chat_id, client_msg_id).
+     * Feed the ids to `NetSession.delivery_status` and mark whatever comes back.
+     */
+    @Throws(FfiException::class)override fun `undeliveredMessages`(`limit`: kotlin.UInt): List<FfiUndelivered> {
+            return FfiConverterSequenceTypeFfiUndelivered.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_sdk_fn_method_notegramcore_undelivered_messages(
+        it, FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -3945,6 +4060,41 @@ public object FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer<FfiStored
 
 
 
+/**
+ * One of our own messages that has not been confirmed delivered yet.
+ */
+data class FfiUndelivered (
+    var `chatId`: kotlin.Long, 
+    var `clientMsgId`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiUndelivered: FfiConverterRustBuffer<FfiUndelivered> {
+    override fun read(buf: ByteBuffer): FfiUndelivered {
+        return FfiUndelivered(
+            FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiUndelivered) = (
+            FfiConverterLong.allocationSize(value.`chatId`) +
+            FfiConverterString.allocationSize(value.`clientMsgId`)
+    )
+
+    override fun write(value: FfiUndelivered, buf: ByteBuffer) {
+            FfiConverterLong.write(value.`chatId`, buf)
+            FfiConverterString.write(value.`clientMsgId`, buf)
+    }
+}
+
+
+
 data class FfiVerified (
     var `userId`: kotlin.Long, 
     var `tmpToken`: kotlin.ByteArray
@@ -4592,6 +4742,62 @@ public object FfiConverterOptionalTypeFfiRecipientPreKeyBundle: FfiConverterRust
 /**
  * @suppress
  */
+public object FfiConverterSequenceUInt: FfiConverterRustBuffer<List<kotlin.UInt>> {
+    override fun read(buf: ByteBuffer): List<kotlin.UInt> {
+        val len = buf.getInt()
+        return List<kotlin.UInt>(len) {
+            FfiConverterUInt.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.UInt>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterUInt.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.UInt>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterUInt.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.String>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceByteArray: FfiConverterRustBuffer<List<kotlin.ByteArray>> {
     override fun read(buf: ByteBuffer): List<kotlin.ByteArray> {
         val len = buf.getInt()
@@ -4834,6 +5040,34 @@ public object FfiConverterSequenceTypeFfiStoredMessage: FfiConverterRustBuffer<L
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFfiStoredMessage.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiUndelivered: FfiConverterRustBuffer<List<FfiUndelivered>> {
+    override fun read(buf: ByteBuffer): List<FfiUndelivered> {
+        val len = buf.getInt()
+        return List<FfiUndelivered>(len) {
+            FfiConverterTypeFfiUndelivered.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiUndelivered>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiUndelivered.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiUndelivered>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiUndelivered.write(it, buf)
         }
     }
 }

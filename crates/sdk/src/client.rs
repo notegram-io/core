@@ -604,6 +604,27 @@ impl<B: Backend> NotegramClient<B> {
         Ok(changed)
     }
 
+    /// Our own messages that have not been confirmed delivered yet, newest
+    /// first, as (chat_id, client_msg_id).
+    ///
+    /// The server pushes a delivery notice once; this is what lets the client
+    /// ask about the ones it may have missed while the link was down.
+    pub fn undelivered_messages(&self, limit: u32) -> Result<Vec<(i64, String)>> {
+        let mut out: Vec<StoredMessage> = Vec::new();
+        for (_, value) in self.store.list(Namespace::Message)? {
+            let msg = messages::decode_message(&value)?;
+            if msg.outgoing && msg.status == MessageStatus::Sent {
+                out.push(msg);
+            }
+        }
+        out.sort_by_key(|m| std::cmp::Reverse(m.created_at));
+        out.truncate(limit as usize);
+        Ok(out
+            .into_iter()
+            .map(|m| (m.chat_id, m.client_msg_id))
+            .collect())
+    }
+
     /// The most recent message of every chat, newest chat first — enough to
     /// render a chat list without loading full histories.
     pub fn list_chat_previews(&self) -> Result<Vec<StoredMessage>> {

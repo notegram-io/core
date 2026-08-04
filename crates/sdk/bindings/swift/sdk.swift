@@ -554,6 +554,13 @@ public protocol NetSessionProtocol : AnyObject {
     
     func claimUsername(name: String) async throws  -> String
     
+    /**
+     * Which of our own messages every recipient has already collected. Asked
+     * for rather than waited on: the delivery notice is pushed once, so a
+     * client that missed it would never learn the message landed.
+     */
+    func deliveryStatus(clientMsgIds: [String]) async throws  -> [String]
+    
     func getDevices() async throws  -> [FfiDevice]
     
     func getEncryptedMessages(limit: Int32) async throws  -> [FfiIncomingMessage]
@@ -569,6 +576,13 @@ public protocol NetSessionProtocol : AnyObject {
     func keysStatus() async throws  -> FfiKeysStatus
     
     func keysUpload(bundle: FfiPrekeyUpload) async throws  -> Int64
+    
+    /**
+     * Constructor ids of the notices sitting in the queue, without consuming
+     * them. A notice this client does not recognise is otherwise silent, and
+     * indistinguishable from one that never arrived.
+     */
+    func pendingUpdateKinds() async  -> [UInt32]
     
     func ping(pingId: Int64) async throws  -> Int64
     
@@ -735,6 +749,28 @@ open func claimUsername(name: String)async throws  -> String {
         )
 }
     
+    /**
+     * Which of our own messages every recipient has already collected. Asked
+     * for rather than waited on: the delivery notice is pushed once, so a
+     * client that missed it would never learn the message landed.
+     */
+open func deliveryStatus(clientMsgIds: [String])async throws  -> [String] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_sdk_fn_method_netsession_delivery_status(
+                    self.uniffiClonePointer(),
+                    FfiConverterSequenceString.lower(clientMsgIds)
+                )
+            },
+            pollFunc: ffi_sdk_rust_future_poll_rust_buffer,
+            completeFunc: ffi_sdk_rust_future_complete_rust_buffer,
+            freeFunc: ffi_sdk_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceString.lift,
+            errorHandler: FfiConverterTypeFfiNetError.lift
+        )
+}
+    
 open func getDevices()async throws  -> [FfiDevice] {
     return
         try  await uniffiRustCallAsync(
@@ -868,6 +904,29 @@ open func keysUpload(bundle: FfiPrekeyUpload)async throws  -> Int64 {
             freeFunc: ffi_sdk_rust_future_free_i64,
             liftFunc: FfiConverterInt64.lift,
             errorHandler: FfiConverterTypeFfiNetError.lift
+        )
+}
+    
+    /**
+     * Constructor ids of the notices sitting in the queue, without consuming
+     * them. A notice this client does not recognise is otherwise silent, and
+     * indistinguishable from one that never arrived.
+     */
+open func pendingUpdateKinds()async  -> [UInt32] {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_sdk_fn_method_netsession_pending_update_kinds(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_sdk_rust_future_poll_rust_buffer,
+            completeFunc: ffi_sdk_rust_future_complete_rust_buffer,
+            freeFunc: ffi_sdk_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceUInt32.lift,
+            errorHandler: nil
+            
         )
 }
     
@@ -1176,6 +1235,12 @@ public protocol NotegramCoreProtocol : AnyObject {
     func saveMessage(message: FfiStoredMessage) throws 
     
     /**
+     * Our own messages still waiting for confirmation, as (chat_id, client_msg_id).
+     * Feed the ids to `NetSession.delivery_status` and mark whatever comes back.
+     */
+    func undeliveredMessages(limit: UInt32) throws  -> [FfiUndelivered]
+    
+    /**
      * Verify a peer's `PrekeyBundleProof` (the `proof` field of a
      * `KeysPeerBundle` device entry) against pinned key-transparency trust
      * anchors, and check the signed-prekey signature against the trusted
@@ -1456,6 +1521,18 @@ open func saveMessage(message: FfiStoredMessage)throws  {try rustCallWithError(F
         FfiConverterTypeFfiStoredMessage.lower(message),$0
     )
 }
+}
+    
+    /**
+     * Our own messages still waiting for confirmation, as (chat_id, client_msg_id).
+     * Feed the ids to `NetSession.delivery_status` and mark whatever comes back.
+     */
+open func undeliveredMessages(limit: UInt32)throws  -> [FfiUndelivered] {
+    return try  FfiConverterSequenceTypeFfiUndelivered.lift(try rustCallWithError(FfiConverterTypeFfiError.lift) {
+    uniffi_sdk_fn_method_notegramcore_undelivered_messages(self.uniffiClonePointer(),
+        FfiConverterUInt32.lower(limit),$0
+    )
+})
 }
     
     /**
@@ -3485,6 +3562,75 @@ public func FfiConverterTypeFfiStoredMessage_lower(_ value: FfiStoredMessage) ->
 }
 
 
+/**
+ * One of our own messages that has not been confirmed delivered yet.
+ */
+public struct FfiUndelivered {
+    public var chatId: Int64
+    public var clientMsgId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(chatId: Int64, clientMsgId: String) {
+        self.chatId = chatId
+        self.clientMsgId = clientMsgId
+    }
+}
+
+
+
+extension FfiUndelivered: Equatable, Hashable {
+    public static func ==(lhs: FfiUndelivered, rhs: FfiUndelivered) -> Bool {
+        if lhs.chatId != rhs.chatId {
+            return false
+        }
+        if lhs.clientMsgId != rhs.clientMsgId {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(chatId)
+        hasher.combine(clientMsgId)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiUndelivered: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiUndelivered {
+        return
+            try FfiUndelivered(
+                chatId: FfiConverterInt64.read(from: &buf), 
+                clientMsgId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiUndelivered, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.chatId, into: &buf)
+        FfiConverterString.write(value.clientMsgId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUndelivered_lift(_ buf: RustBuffer) throws -> FfiUndelivered {
+    return try FfiConverterTypeFfiUndelivered.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiUndelivered_lower(_ value: FfiUndelivered) -> RustBuffer {
+    return FfiConverterTypeFfiUndelivered.lower(value)
+}
+
+
 public struct FfiVerified {
     public var userId: Int64
     public var tmpToken: Data
@@ -4105,6 +4251,56 @@ fileprivate struct FfiConverterOptionTypeFfiRecipientPreKeyBundle: FfiConverterR
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceUInt32: FfiConverterRustBuffer {
+    typealias SwiftType = [UInt32]
+
+    public static func write(_ value: [UInt32], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterUInt32.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [UInt32] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [UInt32]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterUInt32.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceData: FfiConverterRustBuffer {
     typealias SwiftType = [Data]
 
@@ -4326,6 +4522,31 @@ fileprivate struct FfiConverterSequenceTypeFfiStoredMessage: FfiConverterRustBuf
         return seq
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeFfiUndelivered: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiUndelivered]
+
+    public static func write(_ value: [FfiUndelivered], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiUndelivered.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiUndelivered] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiUndelivered]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFfiUndelivered.read(from: &buf))
+        }
+        return seq
+    }
+}
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
@@ -4397,6 +4618,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_sdk_checksum_method_netsession_claim_username() != 21753) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_sdk_checksum_method_netsession_delivery_status() != 19618) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_sdk_checksum_method_netsession_get_devices() != 18671) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -4419,6 +4643,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_netsession_keys_upload() != 6244) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_sdk_checksum_method_netsession_pending_update_kinds() != 26679) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_netsession_ping() != 28737) {
@@ -4503,6 +4730,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_notegramcore_save_message() != 52248) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_sdk_checksum_method_notegramcore_undelivered_messages() != 39073) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_notegramcore_verify_peer_bundle() != 27541) {

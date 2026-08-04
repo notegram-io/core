@@ -364,7 +364,7 @@ mod push_tests {
         state.out_direction = DIR_S2C;
         let mut srv = Connection::new(server, state);
 
-        let handle = tokio::spawn(async move {
+        let server_side = tokio::spawn(async move {
             let _ = srv.recv_frames().await.unwrap();
             // The gateway writes the notice as its own frame, before the reply.
             let notice = encode_to_vec(&UpdateMessageDelivered {
@@ -390,6 +390,7 @@ mod push_tests {
         let pong: Pong = rpc.invoke(&Ping { ping_id: 1 }).await.expect("invoke");
         assert_eq!(pong.ping_id, 1);
 
+        server_side.await.unwrap();
         let queued = rpc.take_updates();
         assert_eq!(queued.len(), 1, "the notice was not queued");
         let update =

@@ -286,6 +286,11 @@ uint64_t uniffi_sdk_fn_method_netsession_authenticate(void*_Nonnull ptr, RustBuf
 uint64_t uniffi_sdk_fn_method_netsession_claim_username(void*_Nonnull ptr, RustBuffer name
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_DELIVERY_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_DELIVERY_STATUS
+uint64_t uniffi_sdk_fn_method_netsession_delivery_status(void*_Nonnull ptr, RustBuffer client_msg_ids
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_DEVICES
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_GET_DEVICES
 uint64_t uniffi_sdk_fn_method_netsession_get_devices(void*_Nonnull ptr
@@ -324,6 +329,11 @@ uint64_t uniffi_sdk_fn_method_netsession_keys_status(void*_Nonnull ptr
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_UPLOAD
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_KEYS_UPLOAD
 uint64_t uniffi_sdk_fn_method_netsession_keys_upload(void*_Nonnull ptr, RustBuffer bundle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_PENDING_UPDATE_KINDS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_PENDING_UPDATE_KINDS
+uint64_t uniffi_sdk_fn_method_netsession_pending_update_kinds(void*_Nonnull ptr
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_PING
@@ -479,6 +489,11 @@ RustBuffer uniffi_sdk_fn_method_notegramcore_rotate_signed_prekey(void*_Nonnull 
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
 void uniffi_sdk_fn_method_notegramcore_save_message(void*_Nonnull ptr, RustBuffer message, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_UNDELIVERED_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_UNDELIVERED_MESSAGES
+RustBuffer uniffi_sdk_fn_method_notegramcore_undelivered_messages(void*_Nonnull ptr, uint32_t limit, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NOTEGRAMCORE_VERIFY_PEER_BUNDLE
@@ -784,6 +799,12 @@ uint16_t uniffi_sdk_checksum_method_netsession_claim_username(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_DELIVERY_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_DELIVERY_STATUS
+uint16_t uniffi_sdk_checksum_method_netsession_delivery_status(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_DEVICES
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_GET_DEVICES
 uint16_t uniffi_sdk_checksum_method_netsession_get_devices(void
@@ -829,6 +850,12 @@ uint16_t uniffi_sdk_checksum_method_netsession_keys_status(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_UPLOAD
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_KEYS_UPLOAD
 uint16_t uniffi_sdk_checksum_method_netsession_keys_upload(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_PENDING_UPDATE_KINDS
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_PENDING_UPDATE_KINDS
+uint16_t uniffi_sdk_checksum_method_netsession_pending_update_kinds(void
     
 );
 #endif
@@ -997,6 +1024,12 @@ uint16_t uniffi_sdk_checksum_method_notegramcore_rotate_signed_prekey(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_SAVE_MESSAGE
 uint16_t uniffi_sdk_checksum_method_notegramcore_save_message(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_UNDELIVERED_MESSAGES
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NOTEGRAMCORE_UNDELIVERED_MESSAGES
+uint16_t uniffi_sdk_checksum_method_notegramcore_undelivered_messages(void
     
 );
 #endif
