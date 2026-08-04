@@ -4458,6 +4458,38 @@ impl TlObject for RecoveryPutBundle {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct RpcAnswer {
+    pub req_msg_id: i64,
+    pub body: Vec<u8>,
+}
+
+impl TlObject for RpcAnswer {
+    const CTOR: u32 = 0x7a3d91c4;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.req_msg_id);
+        e.bytes(&self.body)?;
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor { expected: Self::CTOR, got: ctor });
+        }
+        d.enter()?;
+        let req_msg_id = d.long()?;
+        let body = d.bytes()?;
+        d.leave();
+        Ok(Self {
+            req_msg_id,
+            body,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct RpcResult {
     pub code: i32,
     pub message: String,

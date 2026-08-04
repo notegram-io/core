@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use tl::generated::{InvokeWithLayer, RpcResult};
+use tl::generated::{InvokeWithLayer, RpcAnswer, RpcResult};
 use tl::{decode_from, encode_to_vec, Limits, TlObject};
 use transport::Connection;
 
@@ -79,7 +79,18 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
 
     pub async fn expect<Resp: TlObject>(&mut self) -> Result<Resp> {
         for _ in 0..MAX_STALE {
-            let obj = self.next_object().await?;
+            let raw = self.next_object().await?;
+            // Replies arrive in an envelope naming the request they answer, so
+            // that several can be in flight at once. This client sends one at a
+            // time, so the name only has to be unwrapped.
+            let obj = match read_ctor(&raw)? {
+                RpcAnswer::CTOR => {
+                    decode_from::<RpcAnswer>(&raw, Limits::default())
+                        .map_err(|_| NetError::Decode)?
+                        .body
+                }
+                _ => raw,
+            };
             let ctor = read_ctor(&obj)?;
             if ctor == Resp::CTOR {
                 return decode_from::<Resp>(&obj, Limits::default()).map_err(|_| NetError::Decode);
@@ -250,4 +261,61 @@ mod tests {
         handle.await.unwrap();
     }
 
+}
+
+#[cfg(test)]
+mod answer_tests {
+    use super::*;
+    use tl::generated::{Ping, Pong};
+    use transport::{Connection, SecureState, DIR_S2C};
+
+    #[tokio::test]
+    async fn reply_is_read_out_of_its_envelope() {
+        // The server names the request each reply answers so that several can be
+        // in flight; the reply itself is inside.
+        let (client, server) = tokio::io::duplex(4096);
+        let mut state = SecureState::new_client(3);
+        state.out_direction = DIR_S2C;
+        let mut srv = Connection::new(server, state);
+
+        let handle = tokio::spawn(async move {
+            let _ = srv.recv_frames().await.unwrap();
+            let body = encode_to_vec(&Pong { ping_id: 5, now: 99 }).unwrap();
+            let answer = encode_to_vec(&RpcAnswer {
+                req_msg_id: 123456,
+                body,
+            })
+            .unwrap();
+            srv.send_frames(&[&answer]).await.unwrap();
+        });
+
+        let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(3)));
+        let pong: Pong = rpc.invoke(&Ping { ping_id: 5 }).await.expect("invoke");
+        assert_eq!((pong.ping_id, pong.now), (5, 99));
+        handle.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_error_inside_an_envelope_is_still_an_error() {
+        let (client, server) = tokio::io::duplex(4096);
+        let mut state = SecureState::new_client(4);
+        state.out_direction = DIR_S2C;
+        let mut srv = Connection::new(server, state);
+
+        let handle = tokio::spawn(async move {
+            let _ = srv.recv_frames().await.unwrap();
+            let body = encode_to_vec(&RpcResult {
+                code: 429,
+                message: "FLOOD_WAIT".to_string(),
+            })
+            .unwrap();
+            let answer = encode_to_vec(&RpcAnswer { req_msg_id: 1, body }).unwrap();
+            srv.send_frames(&[&answer]).await.unwrap();
+        });
+
+        let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(4)));
+        let err = rpc.invoke::<Ping, Pong>(&Ping { ping_id: 1 }).await.unwrap_err();
+        assert!(matches!(err, NetError::Rpc { code: 429, .. }), "got {err:?}");
+        handle.await.unwrap();
+    }
 }
