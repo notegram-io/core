@@ -142,6 +142,21 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         self.take_updates_of::<UpdateMessageDelivered>()
     }
 
+    /// Constructor ids of everything currently buffered, leaving the queue
+    /// untouched. Server-initiated notices are invisible until someone asks for
+    /// their exact type, so without this a notice that arrives but is never
+    /// recognised looks identical to one that never arrived.
+    pub fn pending_update_kinds(&mut self) -> Vec<u32> {
+        let raw = self.rpc_mut().take_updates();
+        let kinds = raw
+            .iter()
+            .filter(|r| r.len() >= 4)
+            .map(|r| wire::u32_le(&r[0..4]))
+            .collect();
+        self.rpc_mut().restore_updates(raw);
+        kinds
+    }
+
     /// Pulls out the buffered updates of one type, leaving the rest queued —
     /// draining everything here would discard notices the caller has not asked
     /// for yet.

@@ -607,6 +607,13 @@ impl NetSession {
             .collect()
     }
 
+    /// Constructor ids of the notices sitting in the queue, without consuming
+    /// them. A notice this client does not recognise is otherwise silent, and
+    /// indistinguishable from one that never arrived.
+    pub async fn pending_update_kinds(&self) -> Vec<u32> {
+        self.inner.lock().await.pending_update_kinds()
+    }
+
     pub async fn ack_encrypted(&self, server_msg_id: String) -> Result<bool, FfiNetError> {
         let r = self
             .inner

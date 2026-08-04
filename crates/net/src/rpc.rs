@@ -347,3 +347,53 @@ mod answer_tests {
         handle.await.unwrap();
     }
 }
+
+#[cfg(test)]
+mod push_tests {
+    use super::*;
+    use tl::generated::{Ping, Pong, UpdateMessageDelivered};
+    use transport::{Connection, SecureState, DIR_S2C};
+
+    /// A push arriving on its own frame, exactly as the gateway writes it, must
+    /// end up in the update queue rather than being dropped or breaking the
+    /// reply that follows it.
+    #[tokio::test]
+    async fn a_push_between_replies_is_queued() {
+        let (client, server) = tokio::io::duplex(8192);
+        let mut state = SecureState::new_client(11);
+        state.out_direction = DIR_S2C;
+        let mut srv = Connection::new(server, state);
+
+        let handle = tokio::spawn(async move {
+            let _ = srv.recv_frames().await.unwrap();
+            // The gateway writes the notice as its own frame, before the reply.
+            let notice = encode_to_vec(&UpdateMessageDelivered {
+                chat_id: 77,
+                client_msg_id: "abc-123".to_string(),
+                recipient_user_id: 5,
+                recipient_device_id: 7001,
+                delivered_at: 1_700_000_000_000,
+            })
+            .unwrap();
+            srv.send_frames(&[&notice]).await.unwrap();
+
+            let body = encode_to_vec(&Pong { ping_id: 1, now: 2 }).unwrap();
+            let answer = encode_to_vec(&RpcAnswer {
+                req_msg_id: 1,
+                body,
+            })
+            .unwrap();
+            srv.send_frames(&[&answer]).await.unwrap();
+        });
+
+        let mut rpc = Rpc::new(Connection::new(client, SecureState::new_client(11)));
+        let pong: Pong = rpc.invoke(&Ping { ping_id: 1 }).await.expect("invoke");
+        assert_eq!(pong.ping_id, 1);
+
+        let queued = rpc.take_updates();
+        assert_eq!(queued.len(), 1, "the notice was not queued");
+        let update =
+            decode_from::<UpdateMessageDelivered>(&queued[0], Limits::default()).expect("decode");
+        assert_eq!(update.client_msg_id, "abc-123");
+    }
+}
