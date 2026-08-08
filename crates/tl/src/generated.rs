@@ -412,6 +412,7 @@ pub struct AuthHandshakeOk {
     pub epoch: i32,
     pub server_finished: Vec<u8>,
     pub expires_in: i32,
+    pub username: String,
 }
 
 impl TlObject for AuthHandshakeOk {
@@ -423,6 +424,7 @@ impl TlObject for AuthHandshakeOk {
         e.int(self.epoch);
         e.bytes(&self.server_finished)?;
         e.int(self.expires_in);
+        e.string(&self.username)?;
         Ok(())
     }
 
@@ -439,12 +441,14 @@ impl TlObject for AuthHandshakeOk {
         let epoch = d.int()?;
         let server_finished = d.bytes()?;
         let expires_in = d.int()?;
+        let username = d.string()?;
         d.leave();
         Ok(Self {
             auth_key_id,
             epoch,
             server_finished,
             expires_in,
+            username,
         })
     }
 }

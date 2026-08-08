@@ -110,6 +110,10 @@ pub struct EstablishedSecure {
     pub epoch: u32,
     pub salt: u64,
     pub session_id: u64,
+    /// The account's username, carried by the handshake result so a client does
+    /// not have to spend another round trip asking. Empty when the account has
+    /// none yet, which is what a fresh sign-up looks like.
+    pub username: String,
 }
 
 pub struct ClientHandshake {
@@ -201,6 +205,8 @@ impl ClientHandshake {
                 epoch: transcript.epoch,
                 salt: transcript.salt,
                 session_id: transcript.session_id,
+                // Filled in from the server's reply once it arrives.
+                username: String::new(),
             },
             transcript,
             server_pub_key_id: params.server_pub_key_id,
@@ -223,7 +229,12 @@ impl ClientFinishing {
         if !ct_eq(&ok.server_finished, &expected) {
             return Err(HandshakeError::ServerFinished);
         }
-        Ok(self.established)
+        // Only trusted once the server has proven it holds the same key: the
+        // username arrives in the same reply, and reading it before the check
+        // would mean believing an unauthenticated value.
+        let mut established = self.established;
+        established.username = ok.username.clone();
+        Ok(established)
     }
 }
 

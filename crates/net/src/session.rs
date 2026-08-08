@@ -316,6 +316,7 @@ mod tests {
                 )
                 .to_vec(),
                 expires_in: 3600,
+                username: String::new(),
             },
         )
         .await;

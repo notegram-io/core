@@ -74,6 +74,10 @@ pub struct FfiAuthKeys {
     pub auth_key: Vec<u8>,
     pub auth_key_id: u64,
     pub user_id: i64,
+    /// Carried by the handshake result rather than fetched separately: sign-in
+    /// is where every extra round trip is felt. Empty when the account has no
+    /// username yet.
+    pub username: String,
 }
 
 #[derive(uniffi::Record)]
@@ -352,6 +356,7 @@ impl NetSession {
             auth_key: est.auth_key.to_vec(),
             auth_key_id: est.auth_key_id,
             user_id,
+            username: est.username,
         })
     }
 
@@ -612,6 +617,14 @@ impl NetSession {
     /// indistinguishable from one that never arrived.
     pub async fn pending_update_kinds(&self) -> Vec<u32> {
         self.inner.lock().await.pending_update_kinds()
+    }
+
+    /// Objects read off this link and how many were server-initiated, as
+    /// (read, updates). A push the server reports delivering that never shows
+    /// up here means it was lost between the socket and the decoder.
+    pub async fn traffic_counts(&self) -> Vec<u64> {
+        let (read, updates) = self.inner.lock().await.traffic_counts();
+        vec![read, updates]
     }
 
     /// Which of our own messages every recipient has already collected. Asked

@@ -168,9 +168,14 @@ fn full_client_server_roundtrip() {
         )
         .to_vec(),
         expires_in: 3600,
+        username: "alice".to_string(),
     };
 
     let established = finishing.on_ok(&ok).expect("on_ok");
+    assert_eq!(
+        established.username, "alice",
+        "the username rides along with the handshake result"
+    );
     assert_eq!(
         established.auth_key, server_auth_key,
         "both sides derive the same key"
