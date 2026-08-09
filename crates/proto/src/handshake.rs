@@ -224,6 +224,17 @@ impl ClientHandshake {
 }
 
 impl ClientFinishing {
+    /// The session as derived from the server's signed parameters, without
+    /// waiting for it to confirm the client's proof.
+    ///
+    /// Sound because the server has already authenticated itself: its
+    /// parameters were signed and that signature was checked. The confirmation
+    /// proves nothing further to the client — it matters to the server, which
+    /// is why the proof is still sent.
+    pub fn into_established(self) -> EstablishedSecure {
+        self.established
+    }
+
     pub fn on_ok(self, ok: &AuthHandshakeOk) -> Result<EstablishedSecure, HandshakeError> {
         if ok.auth_key_id != self.established.auth_key_id {
             return Err(HandshakeError::AuthKeyIdMismatch);

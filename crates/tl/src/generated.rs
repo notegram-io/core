@@ -727,6 +727,7 @@ pub struct AuthVerifiedHandshake {
     pub user_id: i64,
     pub tmp_token: Vec<u8>,
     pub params: AuthHandshakeParams,
+    pub username: String,
 }
 
 impl TlObject for AuthVerifiedHandshake {
@@ -737,6 +738,7 @@ impl TlObject for AuthVerifiedHandshake {
         e.long(self.user_id);
         e.bytes(&self.tmp_token)?;
         self.params.encode(e)?;
+        e.string(&self.username)?;
         Ok(())
     }
 
@@ -752,11 +754,13 @@ impl TlObject for AuthVerifiedHandshake {
         let user_id = d.long()?;
         let tmp_token = d.bytes()?;
         let params = AuthHandshakeParams::decode(d)?;
+        let username = d.string()?;
         d.leave();
         Ok(Self {
             user_id,
             tmp_token,
             params,
+            username,
         })
     }
 }

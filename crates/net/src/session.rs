@@ -124,8 +124,21 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         let (finish, finishing) = client
             .on_params(&opened.params, server_ed_pub)
             .map_err(NetError::Handshake)?;
-        let ok: tl::generated::AuthHandshakeOk = self.rpc.invoke(&finish).await?;
-        let established = finishing.on_ok(&ok).map_err(NetError::Handshake)?;
+        // Sent without waiting for the acknowledgement.
+        //
+        // The server authenticated itself in the reply above — its parameters
+        // carry a signature that on_params checked — and the key is already
+        // derived from them, so the reply to this only tells us something we
+        // have established. What it does carry is the client's proof, which the
+        // server needs; TCP ordering puts it ahead of every later request, so
+        // the server sees it before anything that depends on it.
+        //
+        // The cost is where a rejection surfaces: instead of failing here, a
+        // refused proof shows up as the next request being unauthenticated.
+        self.rpc.send(&finish).await?;
+
+        let mut established = finishing.into_established();
+        established.username = opened.username;
         apply_authed_state(self.rpc.connection_mut(), &established);
         self.authed = true;
         self.user_id = opened.user_id;
