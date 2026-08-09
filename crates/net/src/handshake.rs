@@ -34,7 +34,7 @@ where
     Ok(established)
 }
 
-fn apply_authed_state<S>(conn: &mut Connection<S>, est: &EstablishedSecure) {
+pub(crate) fn apply_authed_state<S>(conn: &mut Connection<S>, est: &EstablishedSecure) {
     let mut st = SecureState::new_client(est.session_id);
     st.auth_key = Some(est.auth_key);
     st.auth_key_id = est.auth_key_id;

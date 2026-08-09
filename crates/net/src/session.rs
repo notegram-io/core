@@ -8,8 +8,8 @@ use tl::generated::{
 use transport::{Connection, SecureState};
 
 use crate::admission;
-use crate::error::Result;
-use crate::handshake::{run_handshake, FRAME_EPOCH, FRAME_SALT};
+use crate::error::{NetError, Result};
+use crate::handshake::{apply_authed_state, run_handshake, FRAME_EPOCH, FRAME_SALT};
 use crate::rpc::Rpc;
 
 pub struct Session<S> {
@@ -87,6 +87,49 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
                 code: code.to_string(),
             })
             .await
+    }
+
+    /// Confirms the emailed code and completes the handshake.
+    ///
+    /// The code check and the opening of the handshake go out together: split
+    /// apart, the second request carries only the token the first just issued,
+    /// so it costs a round trip over the internet that the user waits out on
+    /// the confirm button.
+    pub async fn verify_and_authenticate<R: RngCore + CryptoRng>(
+        &mut self,
+        email: &str,
+        email_hash: Vec<u8>,
+        code: &str,
+        client_info: Vec<u8>,
+        server_ed_pub: &[u8; 32],
+        rng: &mut R,
+    ) -> Result<EstablishedSecure> {
+        let (client, begin) =
+            proto::ClientHandshake::begin(Vec::new(), client_info, self.session_id, rng);
+        let opened: tl::generated::AuthVerifiedHandshake = self
+            .rpc
+            .invoke(&tl::generated::AuthVerifyAndBegin {
+                email: email.to_string(),
+                email_hash,
+                code: code.to_string(),
+                client_nonce: begin.client_nonce,
+                client_eph_pub: begin.client_eph_pub,
+                client_info: begin.client_info,
+            })
+            .await?;
+
+        // The token is issued by the same reply, so the handshake state has to
+        // adopt it before it can be finished.
+        let client = client.with_tmp_token(opened.tmp_token);
+        let (finish, finishing) = client
+            .on_params(&opened.params, server_ed_pub)
+            .map_err(NetError::Handshake)?;
+        let ok: tl::generated::AuthHandshakeOk = self.rpc.invoke(&finish).await?;
+        let established = finishing.on_ok(&ok).map_err(NetError::Handshake)?;
+        apply_authed_state(self.rpc.connection_mut(), &established);
+        self.authed = true;
+        self.user_id = opened.user_id;
+        Ok(established)
     }
 
     pub async fn authenticate<R: RngCore + CryptoRng>(

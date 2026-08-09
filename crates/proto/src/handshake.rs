@@ -131,6 +131,14 @@ pub struct ClientFinishing {
 }
 
 impl ClientHandshake {
+    /// Adopts the token issued alongside the handshake parameters. The merged
+    /// sign-in request has no token to send up front — the server mints it in
+    /// the same exchange — so the state is completed once the reply arrives.
+    pub fn with_tmp_token(mut self, tmp_token: Vec<u8>) -> Self {
+        self.tmp_token = tmp_token;
+        self
+    }
+
     pub fn begin<R: RngCore + CryptoRng>(
         tmp_token: Vec<u8>,
         client_info: Vec<u8>,

@@ -333,6 +333,32 @@ impl NetSession {
         })
     }
 
+    /// Confirms the emailed code and signs in, in one exchange with the server.
+    ///
+    /// Replaces verify_email_code followed by authenticate: the second of those
+    /// carried only the token the first had just returned, so it cost a round
+    /// trip spent on a loading screen.
+    pub async fn verify_and_authenticate(
+        &self,
+        email: String,
+        email_hash: Vec<u8>,
+        code: String,
+        client_info: Vec<u8>,
+        server_ed_pub: Vec<u8>,
+    ) -> Result<FfiAuthKeys, FfiNetError> {
+        let ed = arr32(&server_ed_pub)?;
+        let mut guard = self.inner.lock().await;
+        let est = guard
+            .verify_and_authenticate(&email, email_hash, &code, client_info, &ed, &mut OsRng)
+            .await?;
+        Ok(FfiAuthKeys {
+            auth_key: est.auth_key.to_vec(),
+            auth_key_id: est.auth_key_id,
+            user_id: guard.user_id(),
+            username: est.username,
+        })
+    }
+
     pub async fn authenticate(
         &self,
         verified: FfiVerified,

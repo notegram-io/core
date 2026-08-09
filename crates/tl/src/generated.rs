@@ -723,6 +723,96 @@ impl TlObject for AuthVerified {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct AuthVerifiedHandshake {
+    pub user_id: i64,
+    pub tmp_token: Vec<u8>,
+    pub params: AuthHandshakeParams,
+}
+
+impl TlObject for AuthVerifiedHandshake {
+    const CTOR: u32 = 0x9c2b5f31;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.user_id);
+        e.bytes(&self.tmp_token)?;
+        self.params.encode(e)?;
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let user_id = d.long()?;
+        let tmp_token = d.bytes()?;
+        let params = AuthHandshakeParams::decode(d)?;
+        d.leave();
+        Ok(Self {
+            user_id,
+            tmp_token,
+            params,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AuthVerifyAndBegin {
+    pub email: String,
+    pub email_hash: Vec<u8>,
+    pub code: String,
+    pub client_nonce: Vec<u8>,
+    pub client_eph_pub: Vec<u8>,
+    pub client_info: Vec<u8>,
+}
+
+impl TlObject for AuthVerifyAndBegin {
+    const CTOR: u32 = 0x4e1d8a76;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.string(&self.email)?;
+        e.bytes(&self.email_hash)?;
+        e.string(&self.code)?;
+        e.bytes(&self.client_nonce)?;
+        e.bytes(&self.client_eph_pub)?;
+        e.bytes(&self.client_info)?;
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let email = d.string()?;
+        let email_hash = d.bytes()?;
+        let code = d.string()?;
+        let client_nonce = d.bytes()?;
+        let client_eph_pub = d.bytes()?;
+        let client_info = d.bytes()?;
+        d.leave();
+        Ok(Self {
+            email,
+            email_hash,
+            code,
+            client_nonce,
+            client_eph_pub,
+            client_info,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct AuthVerifyEmailCode {
     pub email: String,
     pub email_hash: Vec<u8>,
