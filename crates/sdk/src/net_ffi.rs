@@ -507,6 +507,29 @@ impl NetSession {
         Ok(r.device_id)
     }
 
+    /// Registers where to wake this device. Returns the time the server
+    /// recorded, so the caller can tell a fresh registration from a no-op.
+    pub async fn register_push_token(
+        &self,
+        provider: String,
+        token: String,
+    ) -> Result<i64, FfiNetError> {
+        let r = self
+            .inner
+            .lock()
+            .await
+            .register_push_token(&provider, &token)
+            .await?;
+        Ok(r.updated_at)
+    }
+
+    /// Withdraws this device's address. Returns whether the server had one to
+    /// forget, so a repeated sign-out is a no-op rather than an error.
+    pub async fn unregister_push_token(&self) -> Result<bool, FfiNetError> {
+        let r = self.inner.lock().await.unregister_push_token().await?;
+        Ok(r.deleted)
+    }
+
     pub async fn get_peer_bundle(&self, user_id: i64) -> Result<Vec<FfiPeerDevice>, FfiNetError> {
         let r = self.inner.lock().await.get_peer_bundle(user_id).await?;
         Ok(r.devices

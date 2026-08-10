@@ -8,7 +8,8 @@ use tl::generated::{
     KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesDeliveryStatus, MessagesEncryptedAcked,
     MessagesEncryptedBatch, MessagesEncryptedRecipient, MessagesEncryptedSent,
     MessagesGetDeliveryStatus, MessagesGetEncrypted, MessagesSendEncrypted, OneTimePreKey, Ping,
-    Pong, UpdateMessageDelivered, UpdateNewMessages,
+    Pong, PushRegisterToken, PushTokenRegistered, PushTokenUnregistered, PushUnregisterToken,
+    UpdateMessageDelivered, UpdateNewMessages,
 };
 use tl::TlObject;
 
@@ -93,6 +94,31 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         self.rpc_mut()
             .invoke(&KeysSetDeviceSigningKey { public_key })
             .await
+    }
+
+    /// Tells the server where to wake this device when it is not connected.
+    ///
+    /// The token is an address the push provider issued, never a place to put
+    /// content: the push itself carries nothing and the device fetches and
+    /// decrypts over this same link.
+    pub async fn register_push_token(
+        &mut self,
+        provider: &str,
+        token: &str,
+    ) -> Result<PushTokenRegistered> {
+        self.rpc_mut()
+            .invoke(&PushRegisterToken {
+                provider: provider.to_string(),
+                token: token.to_string(),
+            })
+            .await
+    }
+
+    /// Withdraws this device's address. Signing out has to do this: nothing
+    /// else will, and a device that merely logged out would go on being woken
+    /// for an account it can no longer read.
+    pub async fn unregister_push_token(&mut self) -> Result<PushTokenUnregistered> {
+        self.rpc_mut().invoke(&PushUnregisterToken).await
     }
 
     pub async fn get_peer_bundle(&mut self, user_id: i64) -> Result<KeysPeerBundle> {

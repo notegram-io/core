@@ -4755,6 +4755,130 @@ impl TlObject for Pong {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct PushRegisterToken {
+    pub provider: String,
+    pub token: String,
+}
+
+impl TlObject for PushRegisterToken {
+    const CTOR: u32 = 0x7b1e4c30;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.string(&self.provider)?;
+        e.string(&self.token)?;
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let provider = d.string()?;
+        let token = d.string()?;
+        d.leave();
+        Ok(Self { provider, token })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PushTokenRegistered {
+    pub device_id: i64,
+    pub updated_at: i64,
+}
+
+impl TlObject for PushTokenRegistered {
+    const CTOR: u32 = 0x7b1e4c31;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.device_id);
+        e.long(self.updated_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let device_id = d.long()?;
+        let updated_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            device_id,
+            updated_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PushTokenUnregistered {
+    pub device_id: i64,
+    pub deleted: bool,
+}
+
+impl TlObject for PushTokenUnregistered {
+    const CTOR: u32 = 0x7b1e4c33;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.long(self.device_id);
+        e.bool(self.deleted);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let device_id = d.long()?;
+        let deleted = d.bool()?;
+        d.leave();
+        Ok(Self { device_id, deleted })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct PushUnregisterToken;
+
+impl TlObject for PushUnregisterToken {
+    const CTOR: u32 = 0x7b1e4c32;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        d.leave();
+        Ok(Self)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct RecoveryBundle {
     pub bundle_id: String,
     pub client_ref: String,
