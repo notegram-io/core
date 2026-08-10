@@ -21,11 +21,6 @@ pub struct Rpc<S> {
     conn: Connection<S>,
     pending: VecDeque<Vec<u8>>,
     updates: VecDeque<Vec<u8>>,
-    /// Objects read off the link, and how many of those were server-initiated.
-    /// A push that is written by the server but never seen here is otherwise
-    /// indistinguishable from one that was never sent.
-    objects_read: u64,
-    updates_seen: u64,
 }
 
 impl<S> Rpc<S> {
@@ -34,8 +29,6 @@ impl<S> Rpc<S> {
             conn,
             pending: VecDeque::new(),
             updates: VecDeque::new(),
-            objects_read: 0,
-            updates_seen: 0,
         }
     }
 
@@ -117,13 +110,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
         Err(NetError::NoResponse)
     }
 
-    /// How many objects have been read, and how many were server-initiated.
-    pub fn traffic_counts(&self) -> (u64, u64) {
-        (self.objects_read, self.updates_seen)
-    }
-
     fn record_update(&mut self, obj: Vec<u8>) {
-        self.updates_seen += 1;
         // Bound the queue: a client that never drains updates must not grow
         // memory without limit.
         if self.updates.len() >= MAX_BUFFERED_UPDATES {
@@ -133,7 +120,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Rpc<S> {
     }
 
     async fn next_object(&mut self) -> Result<Vec<u8>> {
-        self.objects_read += 1;
         if let Some(obj) = self.pending.pop_front() {
             return Ok(obj);
         }

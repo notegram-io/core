@@ -376,6 +376,11 @@ uint64_t uniffi_sdk_fn_method_netsession_take_delivery_updates(void*_Nonnull ptr
 uint64_t uniffi_sdk_fn_method_netsession_take_new_message_updates(void*_Nonnull ptr
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_AND_AUTHENTICATE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_AND_AUTHENTICATE
+uint64_t uniffi_sdk_fn_method_netsession_verify_and_authenticate(void*_Nonnull ptr, RustBuffer email, RustBuffer email_hash, RustBuffer code, RustBuffer client_info, RustBuffer server_ed_pub
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_EMAIL_CODE
 #define UNIFFI_FFIDEF_UNIFFI_SDK_FN_METHOD_NETSESSION_VERIFY_EMAIL_CODE
 uint64_t uniffi_sdk_fn_method_netsession_verify_email_code(void*_Nonnull ptr, RustBuffer email, RustBuffer email_hash, RustBuffer code
@@ -904,6 +909,12 @@ uint16_t uniffi_sdk_checksum_method_netsession_take_delivery_updates(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
 #define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_TAKE_NEW_MESSAGE_UPDATES
 uint16_t uniffi_sdk_checksum_method_netsession_take_new_message_updates(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_VERIFY_AND_AUTHENTICATE
+#define UNIFFI_FFIDEF_UNIFFI_SDK_CHECKSUM_METHOD_NETSESSION_VERIFY_AND_AUTHENTICATE
+uint16_t uniffi_sdk_checksum_method_netsession_verify_and_authenticate(void
     
 );
 #endif

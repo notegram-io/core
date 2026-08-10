@@ -815,6 +815,8 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
 
@@ -883,6 +885,8 @@ internal interface UniffiLib : Library {
     fun uniffi_sdk_fn_method_netsession_take_delivery_updates(`ptr`: Pointer,
     ): Long
     fun uniffi_sdk_fn_method_netsession_take_new_message_updates(`ptr`: Pointer,
+    ): Long
+    fun uniffi_sdk_fn_method_netsession_verify_and_authenticate(`ptr`: Pointer,`email`: RustBuffer.ByValue,`emailHash`: RustBuffer.ByValue,`code`: RustBuffer.ByValue,`clientInfo`: RustBuffer.ByValue,`serverEdPub`: RustBuffer.ByValue,
     ): Long
     fun uniffi_sdk_fn_method_netsession_verify_email_code(`ptr`: Pointer,`email`: RustBuffer.ByValue,`emailHash`: RustBuffer.ByValue,`code`: RustBuffer.ByValue,
     ): Long
@@ -1088,6 +1092,8 @@ internal interface UniffiLib : Library {
     ): Short
     fun uniffi_sdk_checksum_method_netsession_take_new_message_updates(
     ): Short
+    fun uniffi_sdk_checksum_method_netsession_verify_and_authenticate(
+    ): Short
     fun uniffi_sdk_checksum_method_netsession_verify_email_code(
     ): Short
     fun uniffi_sdk_checksum_method_notegramcore_create_identity(
@@ -1216,6 +1222,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_netsession_take_new_message_updates() != 16538.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_sdk_checksum_method_netsession_verify_and_authenticate() != 58011.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_sdk_checksum_method_netsession_verify_email_code() != 28563.toShort()) {
@@ -1801,6 +1810,15 @@ public interface NetSessionInterface {
      */
     suspend fun `takeNewMessageUpdates`(): List<FfiNewMessageUpdate>
     
+    /**
+     * Confirms the emailed code and signs in, in one exchange with the server.
+     *
+     * Replaces verify_email_code followed by authenticate: the second of those
+     * carried only the token the first had just returned, so it cost a round
+     * trip spent on a loading screen.
+     */
+    suspend fun `verifyAndAuthenticate`(`email`: kotlin.String, `emailHash`: kotlin.ByteArray, `code`: kotlin.String, `clientInfo`: kotlin.ByteArray, `serverEdPub`: kotlin.ByteArray): FfiAuthKeys
+    
     suspend fun `verifyEmailCode`(`email`: kotlin.String, `emailHash`: kotlin.ByteArray, `code`: kotlin.String): FfiVerified
     
     companion object
@@ -2346,6 +2364,34 @@ open class NetSession: Disposable, AutoCloseable, NetSessionInterface {
         { FfiConverterSequenceTypeFfiNewMessageUpdate.lift(it) },
         // Error FFI converter
         UniffiNullRustCallStatusErrorHandler,
+    )
+    }
+
+    
+    /**
+     * Confirms the emailed code and signs in, in one exchange with the server.
+     *
+     * Replaces verify_email_code followed by authenticate: the second of those
+     * carried only the token the first had just returned, so it cost a round
+     * trip spent on a loading screen.
+     */
+    @Throws(FfiNetException::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `verifyAndAuthenticate`(`email`: kotlin.String, `emailHash`: kotlin.ByteArray, `code`: kotlin.String, `clientInfo`: kotlin.ByteArray, `serverEdPub`: kotlin.ByteArray) : FfiAuthKeys {
+        return uniffiRustCallAsync(
+        callWithPointer { thisPtr ->
+            UniffiLib.INSTANCE.uniffi_sdk_fn_method_netsession_verify_and_authenticate(
+                thisPtr,
+                FfiConverterString.lower(`email`),FfiConverterByteArray.lower(`emailHash`),FfiConverterString.lower(`code`),FfiConverterByteArray.lower(`clientInfo`),FfiConverterByteArray.lower(`serverEdPub`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.INSTANCE.ffi_sdk_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.INSTANCE.ffi_sdk_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterTypeFfiAuthKeys.lift(it) },
+        // Error FFI converter
+        FfiNetException.ErrorHandler,
     )
     }
 
@@ -3091,7 +3137,13 @@ public object FfiConverterTypeNotegramCore: FfiConverter<NotegramCore, Pointer> 
 data class FfiAuthKeys (
     var `authKey`: kotlin.ByteArray, 
     var `authKeyId`: kotlin.ULong, 
-    var `userId`: kotlin.Long
+    var `userId`: kotlin.Long, 
+    /**
+     * Carried by the handshake result rather than fetched separately: sign-in
+     * is where every extra round trip is felt. Empty when the account has no
+     * username yet.
+     */
+    var `username`: kotlin.String
 ) {
     
     companion object
@@ -3106,19 +3158,22 @@ public object FfiConverterTypeFfiAuthKeys: FfiConverterRustBuffer<FfiAuthKeys> {
             FfiConverterByteArray.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterLong.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
     override fun allocationSize(value: FfiAuthKeys) = (
             FfiConverterByteArray.allocationSize(value.`authKey`) +
             FfiConverterULong.allocationSize(value.`authKeyId`) +
-            FfiConverterLong.allocationSize(value.`userId`)
+            FfiConverterLong.allocationSize(value.`userId`) +
+            FfiConverterString.allocationSize(value.`username`)
     )
 
     override fun write(value: FfiAuthKeys, buf: ByteBuffer) {
             FfiConverterByteArray.write(value.`authKey`, buf)
             FfiConverterULong.write(value.`authKeyId`, buf)
             FfiConverterLong.write(value.`userId`, buf)
+            FfiConverterString.write(value.`username`, buf)
     }
 }
 
@@ -4012,7 +4067,16 @@ data class FfiStoredMessage (
      * Set when this message answers another one, holding that message's
      * `message_ref`. Null for an ordinary message.
      */
-    var `replyTo`: kotlin.Long?
+    var `replyTo`: kotlin.Long?, 
+    /**
+     * Who wrote this first, when it was relayed from another chat. Null for
+     * an ordinary message.
+     */
+    var `forwardedFrom`: kotlin.String?, 
+    /**
+     * When the original was written, so a forward shows the original date.
+     */
+    var `forwardedAt`: kotlin.Long?
 ) {
     
     companion object
@@ -4032,6 +4096,8 @@ public object FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer<FfiStored
             FfiConverterLong.read(buf),
             FfiConverterTypeFfiMessageStatus.read(buf),
             FfiConverterOptionalLong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalLong.read(buf),
         )
     }
 
@@ -4043,7 +4109,9 @@ public object FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer<FfiStored
             FfiConverterString.allocationSize(value.`text`) +
             FfiConverterLong.allocationSize(value.`createdAt`) +
             FfiConverterTypeFfiMessageStatus.allocationSize(value.`status`) +
-            FfiConverterOptionalLong.allocationSize(value.`replyTo`)
+            FfiConverterOptionalLong.allocationSize(value.`replyTo`) +
+            FfiConverterOptionalString.allocationSize(value.`forwardedFrom`) +
+            FfiConverterOptionalLong.allocationSize(value.`forwardedAt`)
     )
 
     override fun write(value: FfiStoredMessage, buf: ByteBuffer) {
@@ -4055,6 +4123,8 @@ public object FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer<FfiStored
             FfiConverterLong.write(value.`createdAt`, buf)
             FfiConverterTypeFfiMessageStatus.write(value.`status`, buf)
             FfiConverterOptionalLong.write(value.`replyTo`, buf)
+            FfiConverterOptionalString.write(value.`forwardedFrom`, buf)
+            FfiConverterOptionalLong.write(value.`forwardedAt`, buf)
     }
 }
 
@@ -4396,6 +4466,17 @@ sealed class FfiMessageBody {
         companion object
     }
     
+    /**
+     * Relayed from another chat, naming who wrote it first. The attribution
+     * is the forwarder's claim, not a proof — show it, do not trust it.
+     */
+    data class Forwarded(
+        val `text`: kotlin.String, 
+        val `originUsername`: kotlin.String, 
+        val `originCreatedAt`: kotlin.Long) : FfiMessageBody() {
+        companion object
+    }
+    
 
     
     companion object
@@ -4411,6 +4492,11 @@ public object FfiConverterTypeFfiMessageBody : FfiConverterRustBuffer<FfiMessage
                 FfiConverterString.read(buf),
                 )
             2 -> FfiMessageBody.ReadReceipt(
+                FfiConverterLong.read(buf),
+                )
+            3 -> FfiMessageBody.Forwarded(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
                 FfiConverterLong.read(buf),
                 )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
@@ -4432,6 +4518,15 @@ public object FfiConverterTypeFfiMessageBody : FfiConverterRustBuffer<FfiMessage
                 + FfiConverterLong.allocationSize(value.`upToCreatedAt`)
             )
         }
+        is FfiMessageBody.Forwarded -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`text`)
+                + FfiConverterString.allocationSize(value.`originUsername`)
+                + FfiConverterLong.allocationSize(value.`originCreatedAt`)
+            )
+        }
     }
 
     override fun write(value: FfiMessageBody, buf: ByteBuffer) {
@@ -4444,6 +4539,13 @@ public object FfiConverterTypeFfiMessageBody : FfiConverterRustBuffer<FfiMessage
             is FfiMessageBody.ReadReceipt -> {
                 buf.putInt(2)
                 FfiConverterLong.write(value.`upToCreatedAt`, buf)
+                Unit
+            }
+            is FfiMessageBody.Forwarded -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`text`, buf)
+                FfiConverterString.write(value.`originUsername`, buf)
+                FfiConverterLong.write(value.`originCreatedAt`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
@@ -4668,6 +4770,38 @@ public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
         } else {
             buf.put(1)
             FfiConverterLong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
         }
     }
 }

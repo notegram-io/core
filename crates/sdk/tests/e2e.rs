@@ -185,6 +185,8 @@ fn message_history_is_per_chat_and_chronological() {
             created_at: at,
             status: sdk::MessageStatus::Sent,
             reply_to: None,
+            forwarded_from: None,
+            forwarded_at: None,
         };
 
     // Saved out of order and across two chats.
@@ -317,6 +319,8 @@ fn delivery_status_advances_but_never_regresses() {
         created_at: 1_000,
         status: sdk::MessageStatus::Sent,
         reply_to: None,
+        forwarded_from: None,
+        forwarded_at: None,
     };
     client.save_message(&outgoing).unwrap();
 
@@ -553,6 +557,8 @@ fn a_receipt_marks_everything_sent_up_to_its_watermark() {
         created_at: at,
         status: sdk::MessageStatus::Sent,
         reply_to: None,
+        forwarded_from: None,
+        forwarded_at: None,
     };
     client.save_message(&msg(100, "a", true)).unwrap();
     client.save_message(&msg(200, "b", true)).unwrap();

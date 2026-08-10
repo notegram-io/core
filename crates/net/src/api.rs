@@ -194,13 +194,6 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
             .await
     }
 
-    /// Objects read off this link, and how many of those were server-initiated.
-    /// A push written by the server but never seen here is otherwise
-    /// indistinguishable from one that was never sent.
-    pub fn traffic_counts(&mut self) -> (u64, u64) {
-        self.rpc_mut().traffic_counts()
-    }
-
     pub async fn ack_encrypted(&mut self, server_msg_id: &str) -> Result<MessagesEncryptedAcked> {
         self.rpc_mut()
             .invoke(&MessagesAckEncrypted {

@@ -191,6 +191,13 @@ pub enum FfiMessageBody {
     ReadReceipt {
         up_to_created_at: i64,
     },
+    /// Relayed from another chat, naming who wrote it first. The attribution
+    /// is the forwarder's claim, not a proof — show it, do not trust it.
+    Forwarded {
+        text: String,
+        origin_username: String,
+        origin_created_at: i64,
+    },
 }
 
 impl From<MessageBody> for FfiMessageBody {
@@ -200,6 +207,15 @@ impl From<MessageBody> for FfiMessageBody {
             MessageBody::ReadReceipt { up_to_created_at } => {
                 FfiMessageBody::ReadReceipt { up_to_created_at }
             }
+            MessageBody::Forwarded {
+                text,
+                origin_username,
+                origin_created_at,
+            } => FfiMessageBody::Forwarded {
+                text,
+                origin_username,
+                origin_created_at,
+            },
         }
     }
 }
@@ -211,6 +227,15 @@ impl From<FfiMessageBody> for MessageBody {
             FfiMessageBody::ReadReceipt { up_to_created_at } => {
                 MessageBody::ReadReceipt { up_to_created_at }
             }
+            FfiMessageBody::Forwarded {
+                text,
+                origin_username,
+                origin_created_at,
+            } => MessageBody::Forwarded {
+                text,
+                origin_username,
+                origin_created_at,
+            },
         }
     }
 }
@@ -249,6 +274,11 @@ pub struct FfiStoredMessage {
     /// Set when this message answers another one, holding that message's
     /// `message_ref`. Null for an ordinary message.
     pub reply_to: Option<i64>,
+    /// Who wrote this first, when it was relayed from another chat. Null for
+    /// an ordinary message.
+    pub forwarded_from: Option<String>,
+    /// When the original was written, so a forward shows the original date.
+    pub forwarded_at: Option<i64>,
 }
 
 impl From<StoredMessage> for FfiStoredMessage {
@@ -262,6 +292,8 @@ impl From<StoredMessage> for FfiStoredMessage {
             created_at: m.created_at,
             status: m.status.into(),
             reply_to: m.reply_to,
+            forwarded_from: m.forwarded_from,
+            forwarded_at: m.forwarded_at,
         }
     }
 }
@@ -277,6 +309,8 @@ impl From<FfiStoredMessage> for StoredMessage {
             created_at: m.created_at,
             status: m.status.into(),
             reply_to: m.reply_to,
+            forwarded_from: m.forwarded_from,
+            forwarded_at: m.forwarded_at,
         }
     }
 }

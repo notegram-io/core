@@ -59,6 +59,13 @@ pub struct StoredMessage {
     /// the AEAD associated data, so neither the server nor a relay can retarget
     /// a reply at a different message.
     pub reply_to: Option<i64>,
+    /// Who wrote this first, when it was relayed from another chat. `None` for
+    /// an ordinary message. Asserted by the forwarder, not proven — see
+    /// [`crate::body::MessageBody::Forwarded`].
+    pub forwarded_from: Option<String>,
+    /// When the original was written, so a forward can show the original date
+    /// rather than the moment it was relayed.
+    pub forwarded_at: Option<i64>,
 }
 
 /// Stable 64-bit handle for a message, derived from its `client_msg_id`.
@@ -110,7 +117,7 @@ pub(crate) fn chat_key_prefix(chat_id: i64) -> [u8; 8] {
 
 pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     let mut out = Vec::with_capacity(40 + msg.client_msg_id.len() + msg.text.len());
-    out.push(MESSAGE_FORMAT_V3);
+    out.push(MESSAGE_FORMAT_V4);
     out.extend_from_slice(&msg.chat_id.to_le_bytes());
     out.extend_from_slice(&msg.peer_user_id.to_le_bytes());
     out.push(u8::from(msg.outgoing));
@@ -121,6 +128,10 @@ pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     // 0 is not a valid message ref (message_ref floors at 1), so it doubles as
     // "not a reply" without a separate presence byte.
     out.extend_from_slice(&msg.reply_to.unwrap_or(0).to_le_bytes());
+    // An empty origin means "not a forward": a forward always names someone, so
+    // no separate presence byte is needed.
+    append_str(&mut out, msg.forwarded_from.as_deref().unwrap_or(""));
+    out.extend_from_slice(&msg.forwarded_at.unwrap_or(0).to_le_bytes());
     out
 }
 
@@ -129,7 +140,7 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     // v1 rows predate delivery status and are still on disk; they read back as
     // Sent rather than being discarded.
     let version = r.u8()?;
-    if !(MESSAGE_FORMAT_V1..=MESSAGE_FORMAT_V3).contains(&version) {
+    if !(MESSAGE_FORMAT_V1..=MESSAGE_FORMAT_V4).contains(&version) {
         return Err(SdkError::BadKeyMaterial);
     }
     let chat_id = r.i64()?;
@@ -151,6 +162,20 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     } else {
         None
     };
+    // Rows written before forwarding existed simply stop here; they are read
+    // back as ordinary messages rather than migrated, so history survives the
+    // format change untouched.
+    let (forwarded_from, forwarded_at) = if version >= MESSAGE_FORMAT_V4 {
+        let origin = r.string()?;
+        let at = r.i64()?;
+        if origin.is_empty() {
+            (None, None)
+        } else {
+            (Some(origin), Some(at))
+        }
+    } else {
+        (None, None)
+    };
     Ok(StoredMessage {
         chat_id,
         peer_user_id,
@@ -160,12 +185,15 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
         created_at,
         status,
         reply_to,
+        forwarded_from,
+        forwarded_at,
     })
 }
 
 const MESSAGE_FORMAT_V1: u8 = 1;
 const MESSAGE_FORMAT_V2: u8 = 2;
 const MESSAGE_FORMAT_V3: u8 = 3;
+const MESSAGE_FORMAT_V4: u8 = 4;
 
 fn append_str(out: &mut Vec<u8>, value: &str) {
     let bytes = value.as_bytes();
@@ -226,6 +254,8 @@ mod tests {
             created_at: 1_700_000_000_000,
             status: MessageStatus::Sent,
             reply_to: None,
+            forwarded_from: None,
+            forwarded_at: None,
         }
     }
 
@@ -233,6 +263,31 @@ mod tests {
     fn roundtrip_preserves_every_field() {
         let msg = sample();
         assert_eq!(decode_message(&encode_message(&msg)).unwrap(), msg);
+    }
+
+    #[test]
+    fn roundtrip_preserves_forward_attribution() {
+        let msg = StoredMessage {
+            forwarded_from: Some("durov".into()),
+            forwarded_at: Some(1_600_000_000_000),
+            ..sample()
+        };
+        assert_eq!(decode_message(&encode_message(&msg)).unwrap(), msg);
+    }
+
+    /// History written before forwarding existed has to keep opening. The row
+    /// format grows by appending, so an older row is short rather than wrong —
+    /// this pins that, since silently failing here would lose real messages.
+    #[test]
+    fn rows_written_before_forwarding_still_decode() {
+        let msg = sample();
+        let mut v3 = encode_message(&msg);
+        // Drop the appended origin string and timestamp, and relabel as V3.
+        v3.truncate(v3.len() - (4 + 8));
+        v3[0] = MESSAGE_FORMAT_V3;
+        let back = decode_message(&v3).expect("a V3 row still decodes");
+        assert_eq!(back, msg);
+        assert!(back.forwarded_from.is_none());
     }
 
     #[test]

@@ -6,7 +6,7 @@
 //! covers. Nothing about read state ever reaches the server in the clear, which
 //! is why receipts are not modelled the way delivery notices are.
 
-use tl::generated::{MessageBodyReadReceipt, MessageBodyText};
+use tl::generated::{MessageBodyForwarded, MessageBodyReadReceipt, MessageBodyText};
 use tl::TlObject;
 
 /// A decrypted payload.
@@ -18,6 +18,17 @@ pub enum MessageBody {
     /// receipt covers a backlog and receipts are idempotent.
     ReadReceipt {
         up_to_created_at: i64,
+    },
+    /// A message relayed from somewhere else, carrying who wrote it first.
+    ///
+    /// The attribution is asserted by whoever forwards, and cannot be anything
+    /// else: they could equally retype the text and claim the same origin. It
+    /// is provenance as a courtesy, not as proof, and the UI should not present
+    /// it as verified.
+    Forwarded {
+        text: String,
+        origin_username: String,
+        origin_created_at: i64,
     },
 }
 
@@ -32,6 +43,16 @@ impl MessageBody {
                 })
                 .expect("message body encodes")
             }
+            MessageBody::Forwarded {
+                text,
+                origin_username,
+                origin_created_at,
+            } => tl::encode_to_vec(&MessageBodyForwarded {
+                text: text.clone(),
+                origin_username: origin_username.clone(),
+                origin_created_at: *origin_created_at,
+            })
+            .expect("message body encodes"),
         }
     }
 
@@ -54,7 +75,28 @@ impl MessageBody {
                     Err(_) => MessageBody::Text(lossy_text(raw)),
                 }
             }
+            Some(MessageBodyForwarded::CTOR) => {
+                match tl::decode_from::<MessageBodyForwarded>(raw, tl::Limits::default()) {
+                    Ok(body) => MessageBody::Forwarded {
+                        text: body.text,
+                        origin_username: body.origin_username,
+                        origin_created_at: body.origin_created_at,
+                    },
+                    Err(_) => MessageBody::Text(lossy_text(raw)),
+                }
+            }
             _ => MessageBody::Text(lossy_text(raw)),
+        }
+    }
+
+    /// The words to show, whatever kind of body this is. A forward reads as an
+    /// ordinary message with a header above it, so callers that only care about
+    /// the transcript do not have to match on the variant.
+    pub fn text(&self) -> &str {
+        match self {
+            MessageBody::Text(text) => text,
+            MessageBody::Forwarded { text, .. } => text,
+            MessageBody::ReadReceipt { .. } => "",
         }
     }
 }

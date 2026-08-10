@@ -614,6 +614,15 @@ public protocol NetSessionProtocol : AnyObject {
      */
     func takeNewMessageUpdates() async  -> [FfiNewMessageUpdate]
     
+    /**
+     * Confirms the emailed code and signs in, in one exchange with the server.
+     *
+     * Replaces verify_email_code followed by authenticate: the second of those
+     * carried only the token the first had just returned, so it cost a round
+     * trip spent on a loading screen.
+     */
+    func verifyAndAuthenticate(email: String, emailHash: Data, code: String, clientInfo: Data, serverEdPub: Data) async throws  -> FfiAuthKeys
+    
     func verifyEmailCode(email: String, emailHash: Data, code: String) async throws  -> FfiVerified
     
 }
@@ -1079,6 +1088,30 @@ open func takeNewMessageUpdates()async  -> [FfiNewMessageUpdate] {
             liftFunc: FfiConverterSequenceTypeFfiNewMessageUpdate.lift,
             errorHandler: nil
             
+        )
+}
+    
+    /**
+     * Confirms the emailed code and signs in, in one exchange with the server.
+     *
+     * Replaces verify_email_code followed by authenticate: the second of those
+     * carried only the token the first had just returned, so it cost a round
+     * trip spent on a loading screen.
+     */
+open func verifyAndAuthenticate(email: String, emailHash: Data, code: String, clientInfo: Data, serverEdPub: Data)async throws  -> FfiAuthKeys {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_sdk_fn_method_netsession_verify_and_authenticate(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(email),FfiConverterData.lower(emailHash),FfiConverterString.lower(code),FfiConverterData.lower(clientInfo),FfiConverterData.lower(serverEdPub)
+                )
+            },
+            pollFunc: ffi_sdk_rust_future_poll_rust_buffer,
+            completeFunc: ffi_sdk_rust_future_complete_rust_buffer,
+            freeFunc: ffi_sdk_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeFfiAuthKeys.lift,
+            errorHandler: FfiConverterTypeFfiNetError.lift
         )
 }
     
@@ -1612,13 +1645,25 @@ public struct FfiAuthKeys {
     public var authKey: Data
     public var authKeyId: UInt64
     public var userId: Int64
+    /**
+     * Carried by the handshake result rather than fetched separately: sign-in
+     * is where every extra round trip is felt. Empty when the account has no
+     * username yet.
+     */
+    public var username: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(authKey: Data, authKeyId: UInt64, userId: Int64) {
+    public init(authKey: Data, authKeyId: UInt64, userId: Int64, 
+        /**
+         * Carried by the handshake result rather than fetched separately: sign-in
+         * is where every extra round trip is felt. Empty when the account has no
+         * username yet.
+         */username: String) {
         self.authKey = authKey
         self.authKeyId = authKeyId
         self.userId = userId
+        self.username = username
     }
 }
 
@@ -1635,6 +1680,9 @@ extension FfiAuthKeys: Equatable, Hashable {
         if lhs.userId != rhs.userId {
             return false
         }
+        if lhs.username != rhs.username {
+            return false
+        }
         return true
     }
 
@@ -1642,6 +1690,7 @@ extension FfiAuthKeys: Equatable, Hashable {
         hasher.combine(authKey)
         hasher.combine(authKeyId)
         hasher.combine(userId)
+        hasher.combine(username)
     }
 }
 
@@ -1655,7 +1704,8 @@ public struct FfiConverterTypeFfiAuthKeys: FfiConverterRustBuffer {
             try FfiAuthKeys(
                 authKey: FfiConverterData.read(from: &buf), 
                 authKeyId: FfiConverterUInt64.read(from: &buf), 
-                userId: FfiConverterInt64.read(from: &buf)
+                userId: FfiConverterInt64.read(from: &buf), 
+                username: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -1663,6 +1713,7 @@ public struct FfiConverterTypeFfiAuthKeys: FfiConverterRustBuffer {
         FfiConverterData.write(value.authKey, into: &buf)
         FfiConverterUInt64.write(value.authKeyId, into: &buf)
         FfiConverterInt64.write(value.userId, into: &buf)
+        FfiConverterString.write(value.username, into: &buf)
     }
 }
 
@@ -3450,6 +3501,15 @@ public struct FfiStoredMessage {
      * `message_ref`. Null for an ordinary message.
      */
     public var replyTo: Int64?
+    /**
+     * Who wrote this first, when it was relayed from another chat. Null for
+     * an ordinary message.
+     */
+    public var forwardedFrom: String?
+    /**
+     * When the original was written, so a forward shows the original date.
+     */
+    public var forwardedAt: Int64?
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
@@ -3460,7 +3520,14 @@ public struct FfiStoredMessage {
         /**
          * Set when this message answers another one, holding that message's
          * `message_ref`. Null for an ordinary message.
-         */replyTo: Int64?) {
+         */replyTo: Int64?, 
+        /**
+         * Who wrote this first, when it was relayed from another chat. Null for
+         * an ordinary message.
+         */forwardedFrom: String?, 
+        /**
+         * When the original was written, so a forward shows the original date.
+         */forwardedAt: Int64?) {
         self.chatId = chatId
         self.peerUserId = peerUserId
         self.outgoing = outgoing
@@ -3469,6 +3536,8 @@ public struct FfiStoredMessage {
         self.createdAt = createdAt
         self.status = status
         self.replyTo = replyTo
+        self.forwardedFrom = forwardedFrom
+        self.forwardedAt = forwardedAt
     }
 }
 
@@ -3500,6 +3569,12 @@ extension FfiStoredMessage: Equatable, Hashable {
         if lhs.replyTo != rhs.replyTo {
             return false
         }
+        if lhs.forwardedFrom != rhs.forwardedFrom {
+            return false
+        }
+        if lhs.forwardedAt != rhs.forwardedAt {
+            return false
+        }
         return true
     }
 
@@ -3512,6 +3587,8 @@ extension FfiStoredMessage: Equatable, Hashable {
         hasher.combine(createdAt)
         hasher.combine(status)
         hasher.combine(replyTo)
+        hasher.combine(forwardedFrom)
+        hasher.combine(forwardedAt)
     }
 }
 
@@ -3530,7 +3607,9 @@ public struct FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer {
                 text: FfiConverterString.read(from: &buf), 
                 createdAt: FfiConverterInt64.read(from: &buf), 
                 status: FfiConverterTypeFfiMessageStatus.read(from: &buf), 
-                replyTo: FfiConverterOptionInt64.read(from: &buf)
+                replyTo: FfiConverterOptionInt64.read(from: &buf), 
+                forwardedFrom: FfiConverterOptionString.read(from: &buf), 
+                forwardedAt: FfiConverterOptionInt64.read(from: &buf)
         )
     }
 
@@ -3543,6 +3622,8 @@ public struct FfiConverterTypeFfiStoredMessage: FfiConverterRustBuffer {
         FfiConverterInt64.write(value.createdAt, into: &buf)
         FfiConverterTypeFfiMessageStatus.write(value.status, into: &buf)
         FfiConverterOptionInt64.write(value.replyTo, into: &buf)
+        FfiConverterOptionString.write(value.forwardedFrom, into: &buf)
+        FfiConverterOptionInt64.write(value.forwardedAt, into: &buf)
     }
 }
 
@@ -3948,6 +4029,12 @@ public enum FfiMessageBody {
      */
     case readReceipt(upToCreatedAt: Int64
     )
+    /**
+     * Relayed from another chat, naming who wrote it first. The attribution
+     * is the forwarder's claim, not a proof — show it, do not trust it.
+     */
+    case forwarded(text: String, originUsername: String, originCreatedAt: Int64
+    )
 }
 
 
@@ -3967,6 +4054,9 @@ public struct FfiConverterTypeFfiMessageBody: FfiConverterRustBuffer {
         case 2: return .readReceipt(upToCreatedAt: try FfiConverterInt64.read(from: &buf)
         )
         
+        case 3: return .forwarded(text: try FfiConverterString.read(from: &buf), originUsername: try FfiConverterString.read(from: &buf), originCreatedAt: try FfiConverterInt64.read(from: &buf)
+        )
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3983,6 +4073,13 @@ public struct FfiConverterTypeFfiMessageBody: FfiConverterRustBuffer {
         case let .readReceipt(upToCreatedAt):
             writeInt(&buf, Int32(2))
             FfiConverterInt64.write(upToCreatedAt, into: &buf)
+            
+        
+        case let .forwarded(text,originUsername,originCreatedAt):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(text, into: &buf)
+            FfiConverterString.write(originUsername, into: &buf)
+            FfiConverterInt64.write(originCreatedAt, into: &buf)
             
         }
     }
@@ -4195,6 +4292,30 @@ fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -4670,6 +4791,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_netsession_take_new_message_updates() != 16538) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_sdk_checksum_method_netsession_verify_and_authenticate() != 58011) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_sdk_checksum_method_netsession_verify_email_code() != 28563) {

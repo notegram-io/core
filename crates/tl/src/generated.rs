@@ -3523,6 +3523,45 @@ impl TlObject for MessageAssociatedData {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessageBodyForwarded {
+    pub text: String,
+    pub origin_username: String,
+    pub origin_created_at: i64,
+}
+
+impl TlObject for MessageBodyForwarded {
+    const CTOR: u32 = 0xe2ee000b;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.string(&self.text)?;
+        e.string(&self.origin_username)?;
+        e.long(self.origin_created_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let text = d.string()?;
+        let origin_username = d.string()?;
+        let origin_created_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            text,
+            origin_username,
+            origin_created_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessageBodyReadReceipt {
     pub up_to_created_at: i64,
 }

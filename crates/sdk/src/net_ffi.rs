@@ -645,14 +645,6 @@ impl NetSession {
         self.inner.lock().await.pending_update_kinds()
     }
 
-    /// Objects read off this link and how many were server-initiated, as
-    /// (read, updates). A push the server reports delivering that never shows
-    /// up here means it was lost between the socket and the decoder.
-    pub async fn traffic_counts(&self) -> Vec<u64> {
-        let (read, updates) = self.inner.lock().await.traffic_counts();
-        vec![read, updates]
-    }
-
     /// Which of our own messages every recipient has already collected. Asked
     /// for rather than waited on: the delivery notice is pushed once, so a
     /// client that missed it would never learn the message landed.
