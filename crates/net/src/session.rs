@@ -555,7 +555,7 @@ mod tests {
             "123456",
         ));
 
-        let mut session = Session::open(client_io, session_id, route_dc)
+        let session = Session::open(client_io, session_id, route_dc)
             .await
             .expect("open/admit");
         assert!(!session.is_authenticated());
