@@ -10,7 +10,6 @@ use transport::{Connection, SecureState};
 
 use crate::error::{NetError, Result};
 use crate::rpc::LAYER;
-use crate::session::Session;
 
 /// Requests waiting for an answer, keyed by the transport msg_id they were sent
 /// under — the same id the server echoes in `RpcAnswer.ReqMsgID`.
@@ -38,12 +37,6 @@ pub struct Client<S: AsyncWrite + Unpin> {
 }
 
 impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Client<S> {
-    pub fn from_session(session: Session<S>) -> Self {
-        let conn = session.into_rpc().into_connection();
-        let state = conn.state().clone();
-        Self::new(conn.into_inner(), state)
-    }
-
     pub fn new(stream: S, state: SecureState) -> Self {
         let (rd, wr) = split(stream);
         let read_conn = Connection::new(rd, state.clone());
@@ -112,6 +105,27 @@ impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Client<S> {
 
     pub async fn next_update(&self) -> Option<Vec<u8>> {
         self.updates.lock().await.recv().await
+    }
+
+    /// Everything the reader has collected so far, without waiting for more.
+    ///
+    /// A caller that polls — a UI tick, say — wants whatever has arrived and
+    /// wants it now; blocking for the next notice would stall the tick that
+    /// asked.
+    pub async fn drain_updates(&self) -> Vec<Vec<u8>> {
+        let mut rx = self.updates.lock().await;
+        let mut out = Vec::new();
+        while let Ok(obj) = rx.try_recv() {
+            out.push(obj);
+        }
+        out
+    }
+
+    /// Whether the reader is still running. Once it stops the link is gone and
+    /// every later call fails; callers use this to rebuild rather than to
+    /// discover it one failed request at a time.
+    pub fn is_live(&self) -> bool {
+        !self.reader.is_finished()
     }
 }
 

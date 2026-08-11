@@ -6,7 +6,6 @@ use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, Server
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
 use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
 use tokio::net::TcpStream;
-use tokio::sync::Mutex;
 use tokio_rustls::TlsConnector;
 
 use net::Session;
@@ -267,8 +266,13 @@ fn arr32(v: &[u8]) -> Result<[u8; 32], FfiNetError> {
 }
 
 #[derive(uniffi::Object)]
+/// The link the platform holds.
+///
+/// No lock of its own any more: `Session` serialises only what has to be —
+/// the sign-in handshake — and lets everything after it overlap. Wrapping it
+/// in a mutex here would put the queueing straight back.
 pub struct NetSession {
-    inner: Mutex<Session<Tls>>,
+    inner: Session<Tls>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -277,9 +281,7 @@ impl NetSession {
     pub async fn connect(edge_addr: String, route_dc: u32) -> Result<Arc<Self>, FfiNetError> {
         let tls = dial_tls(&edge_addr).await?;
         let session = Session::open(tls, now_nanos(), route_dc).await?;
-        Ok(Arc::new(NetSession {
-            inner: Mutex::new(session),
-        }))
+        Ok(Arc::new(NetSession { inner: session }))
     }
 
     #[uniffi::constructor]
@@ -292,9 +294,7 @@ impl NetSession {
         let ak = arr32(&auth_key)?;
         let tls = dial_tls(&edge_addr).await?;
         let session = Session::open_authed(tls, now_nanos(), route_dc, ak, auth_key_id).await?;
-        Ok(Arc::new(NetSession {
-            inner: Mutex::new(session),
-        }))
+        Ok(Arc::new(NetSession { inner: session }))
     }
 
     pub async fn send_email_code(
@@ -305,8 +305,6 @@ impl NetSession {
     ) -> Result<FfiSentCode, FfiNetError> {
         let r = self
             .inner
-            .lock()
-            .await
             .send_email_code(&email, &purpose, device_id)
             .await?;
         Ok(FfiSentCode {
@@ -323,8 +321,6 @@ impl NetSession {
     ) -> Result<FfiVerified, FfiNetError> {
         let r = self
             .inner
-            .lock()
-            .await
             .verify_email_code(&email, email_hash, &code)
             .await?;
         Ok(FfiVerified {
@@ -347,14 +343,14 @@ impl NetSession {
         server_ed_pub: Vec<u8>,
     ) -> Result<FfiAuthKeys, FfiNetError> {
         let ed = arr32(&server_ed_pub)?;
-        let mut guard = self.inner.lock().await;
-        let est = guard
+        let est = self
+            .inner
             .verify_and_authenticate(&email, email_hash, &code, client_info, &ed, &mut OsRng)
             .await?;
         Ok(FfiAuthKeys {
             auth_key: est.auth_key.to_vec(),
             auth_key_id: est.auth_key_id,
-            user_id: guard.user_id(),
+            user_id: self.inner.user_id(),
             username: est.username,
         })
     }
@@ -374,8 +370,6 @@ impl NetSession {
         };
         let est = self
             .inner
-            .lock()
-            .await
             .authenticate(&v, client_info, &ed, &mut OsRng)
             .await?;
         Ok(FfiAuthKeys {
@@ -387,7 +381,7 @@ impl NetSession {
     }
 
     pub async fn resolve_username(&self, name: String) -> Result<FfiResolved, FfiNetError> {
-        let r = self.inner.lock().await.resolve_username(&name).await?;
+        let r = self.inner.resolve_username(&name).await?;
         Ok(FfiResolved {
             username: r.username,
             user_id: r.user_id,
@@ -396,21 +390,15 @@ impl NetSession {
     }
 
     pub async fn get_my_username(&self) -> Result<String, FfiNetError> {
-        Ok(self.inner.lock().await.get_my_username().await?.username)
+        Ok(self.inner.get_my_username().await?.username)
     }
 
     pub async fn claim_username(&self, name: String) -> Result<String, FfiNetError> {
-        Ok(self
-            .inner
-            .lock()
-            .await
-            .claim_username(&name)
-            .await?
-            .username)
+        Ok(self.inner.claim_username(&name).await?.username)
     }
 
     pub async fn get_profile(&self, user_id: i64) -> Result<FfiProfile, FfiNetError> {
-        let p = self.inner.lock().await.get_profile(user_id).await?;
+        let p = self.inner.get_profile(user_id).await?;
         Ok(FfiProfile {
             user_id: p.user_id,
             display_name: p.display_name,
@@ -419,7 +407,7 @@ impl NetSession {
     }
 
     pub async fn get_my_profile(&self) -> Result<FfiProfile, FfiNetError> {
-        let p = self.inner.lock().await.get_my_profile().await?;
+        let p = self.inner.get_my_profile().await?;
         Ok(FfiProfile {
             user_id: p.user_id,
             display_name: p.display_name,
@@ -432,12 +420,7 @@ impl NetSession {
         display_name: String,
         bio: String,
     ) -> Result<FfiProfile, FfiNetError> {
-        let p = self
-            .inner
-            .lock()
-            .await
-            .set_profile(&display_name, &bio)
-            .await?;
+        let p = self.inner.set_profile(&display_name, &bio).await?;
         Ok(FfiProfile {
             user_id: p.user_id,
             display_name: p.display_name,
@@ -446,7 +429,7 @@ impl NetSession {
     }
 
     pub async fn get_devices(&self) -> Result<Vec<FfiDevice>, FfiNetError> {
-        let d = self.inner.lock().await.get_devices().await?;
+        let d = self.inner.get_devices().await?;
         Ok(d.devices
             .into_iter()
             .map(|x| FfiDevice {
@@ -458,7 +441,7 @@ impl NetSession {
     }
 
     pub async fn ping(&self, ping_id: i64) -> Result<i64, FfiNetError> {
-        Ok(self.inner.lock().await.ping(ping_id).await?.now)
+        Ok(self.inner.ping(ping_id).await?.now)
     }
 
     pub async fn keys_upload(&self, bundle: FfiPrekeyUpload) -> Result<i64, FfiNetError> {
@@ -472,8 +455,6 @@ impl NetSession {
             .collect();
         let r = self
             .inner
-            .lock()
-            .await
             .keys_upload(
                 bundle.identity_key,
                 bundle.signed_pre_key_id,
@@ -486,7 +467,7 @@ impl NetSession {
     }
 
     pub async fn keys_status(&self) -> Result<FfiKeysStatus, FfiNetError> {
-        let s = self.inner.lock().await.keys_status().await?;
+        let s = self.inner.keys_status().await?;
         Ok(FfiKeysStatus {
             device_id: s.device_id,
             remaining_one_time: s.remaining_one_time,
@@ -498,12 +479,7 @@ impl NetSession {
     }
 
     pub async fn set_device_signing_key(&self, public_key: Vec<u8>) -> Result<i64, FfiNetError> {
-        let r = self
-            .inner
-            .lock()
-            .await
-            .set_device_signing_key(public_key)
-            .await?;
+        let r = self.inner.set_device_signing_key(public_key).await?;
         Ok(r.device_id)
     }
 
@@ -514,24 +490,19 @@ impl NetSession {
         provider: String,
         token: String,
     ) -> Result<i64, FfiNetError> {
-        let r = self
-            .inner
-            .lock()
-            .await
-            .register_push_token(&provider, &token)
-            .await?;
+        let r = self.inner.register_push_token(&provider, &token).await?;
         Ok(r.updated_at)
     }
 
     /// Withdraws this device's address. Returns whether the server had one to
     /// forget, so a repeated sign-out is a no-op rather than an error.
     pub async fn unregister_push_token(&self) -> Result<bool, FfiNetError> {
-        let r = self.inner.lock().await.unregister_push_token().await?;
+        let r = self.inner.unregister_push_token().await?;
         Ok(r.deleted)
     }
 
     pub async fn get_peer_bundle(&self, user_id: i64) -> Result<Vec<FfiPeerDevice>, FfiNetError> {
-        let r = self.inner.lock().await.get_peer_bundle(user_id).await?;
+        let r = self.inner.get_peer_bundle(user_id).await?;
         Ok(r.devices
             .into_iter()
             .map(|d| FfiPeerDevice {
@@ -571,8 +542,6 @@ impl NetSession {
             .collect();
         let r = self
             .inner
-            .lock()
-            .await
             .send_encrypted(
                 &client_msg_id,
                 chat_id,
@@ -595,12 +564,7 @@ impl NetSession {
         &self,
         limit: i32,
     ) -> Result<Vec<FfiIncomingMessage>, FfiNetError> {
-        let batch = self
-            .inner
-            .lock()
-            .await
-            .get_encrypted_messages(limit)
-            .await?;
+        let batch = self.inner.get_encrypted_messages(limit).await?;
         Ok(batch
             .items
             .into_iter()
@@ -630,9 +594,8 @@ impl NetSession {
     /// stays on the server until acked.
     pub async fn take_new_message_updates(&self) -> Vec<FfiNewMessageUpdate> {
         self.inner
-            .lock()
-            .await
             .take_new_message_updates()
+            .await
             .into_iter()
             .map(|u| FfiNewMessageUpdate {
                 chat_id: u.chat_id,
@@ -647,9 +610,8 @@ impl NetSession {
     /// `client_msg_id` and advance the status.
     pub async fn take_delivery_updates(&self) -> Vec<FfiDeliveryUpdate> {
         self.inner
-            .lock()
-            .await
             .take_delivery_updates()
+            .await
             .into_iter()
             .map(|u| FfiDeliveryUpdate {
                 chat_id: u.chat_id,
@@ -665,7 +627,7 @@ impl NetSession {
     /// them. A notice this client does not recognise is otherwise silent, and
     /// indistinguishable from one that never arrived.
     pub async fn pending_update_kinds(&self) -> Vec<u32> {
-        self.inner.lock().await.pending_update_kinds()
+        self.inner.pending_update_kinds().await
     }
 
     /// Which of our own messages every recipient has already collected. Asked
@@ -675,22 +637,12 @@ impl NetSession {
         &self,
         client_msg_ids: Vec<String>,
     ) -> Result<Vec<String>, FfiNetError> {
-        let r = self
-            .inner
-            .lock()
-            .await
-            .delivery_status(client_msg_ids)
-            .await?;
+        let r = self.inner.delivery_status(client_msg_ids).await?;
         Ok(r.delivered)
     }
 
     pub async fn ack_encrypted(&self, server_msg_id: String) -> Result<bool, FfiNetError> {
-        let r = self
-            .inner
-            .lock()
-            .await
-            .ack_encrypted(&server_msg_id)
-            .await?;
+        let r = self.inner.ack_encrypted(&server_msg_id).await?;
         Ok(r.deleted)
     }
 
@@ -701,12 +653,7 @@ impl NetSession {
         &self,
         server_msg_ids: Vec<String>,
     ) -> Result<Vec<String>, FfiNetError> {
-        let r = self
-            .inner
-            .lock()
-            .await
-            .ack_encrypted_batch(server_msg_ids)
-            .await?;
+        let r = self.inner.ack_encrypted_batch(server_msg_ids).await?;
         Ok(r.deleted)
     }
 }

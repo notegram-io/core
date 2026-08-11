@@ -1,39 +1,173 @@
+use std::collections::VecDeque;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
+use std::sync::Arc;
+
 use rand_core::{CryptoRng, RngCore};
 use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::sync::{Mutex, RwLock};
 
 use proto::EstablishedSecure;
 use tl::generated::{
     AuthSendEmailCode, AuthSentCode, AuthVerified, AuthVerifyEmailCode, HelpConfig, HelpGetConfig,
 };
+use tl::TlObject;
 use transport::{Connection, SecureState};
 
 use crate::admission;
+use crate::client::Client;
 use crate::error::{NetError, Result};
 use crate::handshake::{apply_authed_state, run_handshake, FRAME_EPOCH, FRAME_SALT};
 use crate::rpc::Rpc;
 
-pub struct Session<S> {
-    rpc: Rpc<S>,
+/// Cap on undrained notices, matching the one the handshake transport applies.
+const MAX_BUFFERED_UPDATES: usize = 256;
+
+/// One link to the server, in whichever of its two shapes it currently has.
+///
+/// Signing in and running are different problems. The handshake rewrites the
+/// connection's secure state part-way through — the auth key does not exist
+/// until the exchange is nearly done — so it needs the socket to itself and
+/// strict turn-taking. Afterwards none of that applies, and the useful shape is
+/// the opposite: a reader that owns the read half, so notices arrive without
+/// anyone having asked a question and requests stop queueing behind each other.
+///
+/// Both live behind one object because callers should not have to know which
+/// phase they are in, and because the typed API in `api.rs` is written once
+/// against `invoke` rather than twice against two transports.
+pub struct Session<S: AsyncWrite + Unpin> {
+    /// Held only while signing in. Taken, and left empty, on going live.
+    handshake: Mutex<Option<Rpc<S>>>,
+    /// Set once the link is authenticated. Read without holding a lock across
+    /// the call, which is what allows requests to overlap.
+    live: RwLock<Option<Arc<Client<S>>>>,
+    /// Server-initiated notices from whichever transport is in use, so callers
+    /// see one queue across the switch.
+    updates: Mutex<VecDeque<Vec<u8>>>,
     session_id: u64,
-    authed: bool,
-    user_id: i64,
+    authed: AtomicBool,
+    user_id: AtomicI64,
 }
 
-impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
+impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Session<S> {
+    /// Sends a request and waits for its answer, over whichever transport is
+    /// current.
+    pub async fn invoke<Req: TlObject, Resp: TlObject>(&self, req: &Req) -> Result<Resp> {
+        // Cloned out of the guard so the lock is not held across the call:
+        // holding it would serialise every request and undo the point of the
+        // reader-owning client.
+        let live = self.live.read().await.clone();
+        if let Some(client) = live {
+            return client.invoke(req).await;
+        }
+        let mut guard = self.handshake.lock().await;
+        let rpc = guard.as_mut().ok_or(NetError::Closed)?;
+        let out = rpc.invoke(req).await;
+        // Notices seen while waiting move to the shared queue, so they survive
+        // the switch to the live transport.
+        let seen = rpc.take_updates();
+        drop(guard);
+        self.buffer_updates(seen).await;
+        out
+    }
+
+    async fn buffer_updates(&self, seen: Vec<Vec<u8>>) {
+        if seen.is_empty() {
+            return;
+        }
+        let mut queue = self.updates.lock().await;
+        for obj in seen {
+            if queue.len() >= MAX_BUFFERED_UPDATES {
+                queue.pop_front();
+            }
+            queue.push_back(obj);
+        }
+    }
+
+    /// Moves whatever the live reader has collected into the shared queue and
+    /// hands the queue over.
+    pub async fn take_updates(&self) -> Vec<Vec<u8>> {
+        let live = self.live.read().await.clone();
+        if let Some(client) = live {
+            let fresh = client.drain_updates().await;
+            self.buffer_updates(fresh).await;
+        }
+        self.updates.lock().await.drain(..).collect()
+    }
+
+    /// Puts back notices a caller pulled out but did not consume.
+    pub async fn restore_updates(&self, updates: Vec<Vec<u8>>) {
+        let mut queue = self.updates.lock().await;
+        for obj in updates.into_iter().rev() {
+            if queue.len() >= MAX_BUFFERED_UPDATES {
+                break;
+            }
+            queue.push_front(obj);
+        }
+    }
+
+    /// Hands the socket to a reader of its own.
+    ///
+    /// Only valid once the connection is authenticated: the reader takes the
+    /// read half, and the handshake still has to rewrite the secure state that
+    /// both halves copy. Anything the handshake transport had already buffered
+    /// is carried over rather than dropped — a notice that arrived during
+    /// sign-in is as real as any other.
+    async fn go_live(&self) -> Result<()> {
+        let mut guard = self.handshake.lock().await;
+        let rpc = match guard.take() {
+            Some(rpc) => rpc,
+            // Already live, or already closed. Both are fine to ask twice.
+            None => return Ok(()),
+        };
+        let mut rpc = rpc;
+        let buffered = rpc.take_updates();
+        let conn = rpc.into_connection();
+        let state = conn.state().clone();
+        let client = Client::new(conn.into_inner(), state);
+        *self.live.write().await = Some(Arc::new(client));
+        drop(guard);
+        self.buffer_updates(buffered).await;
+        Ok(())
+    }
+
+    /// Whether the link is still usable. A finished reader means the socket is
+    /// gone, which callers would otherwise only learn one failed request later.
+    pub async fn is_live(&self) -> bool {
+        match self.live.read().await.as_ref() {
+            Some(client) => client.is_live(),
+            None => self.handshake.lock().await.is_some(),
+        }
+    }
+}
+
+impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Session<S> {
+    fn from_rpc(rpc: Rpc<S>, session_id: u64, authed: bool) -> Session<S> {
+        Session {
+            handshake: Mutex::new(Some(rpc)),
+            live: RwLock::new(None),
+            updates: Mutex::new(VecDeque::new()),
+            session_id,
+            authed: AtomicBool::new(authed),
+            user_id: AtomicI64::new(0),
+        }
+    }
+
     pub async fn open(mut stream: S, session_id: u64, route_dc: u32) -> Result<Session<S>> {
         admission::admit(&mut stream, session_id, route_dc).await?;
         let mut state = SecureState::new_client(session_id);
 
         state.epoch = FRAME_EPOCH;
         state.salt = FRAME_SALT;
-        Ok(Session {
-            rpc: Rpc::new(Connection::new(stream, state)),
+        Ok(Session::from_rpc(
+            Rpc::new(Connection::new(stream, state)),
             session_id,
-            authed: false,
-            user_id: 0,
-        })
+            false,
+        ))
     }
 
+    /// Opens a link that is already authenticated, and hands it straight to a
+    /// reader: there is no handshake to do, so nothing needs the socket to
+    /// itself and the useful shape is available immediately.
     pub async fn open_authed(
         mut stream: S,
         session_id: u64,
@@ -47,46 +181,41 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         state.auth_key_id = auth_key_id;
         state.epoch = FRAME_EPOCH;
         state.salt = FRAME_SALT;
-        Ok(Session {
-            rpc: Rpc::new(Connection::new(stream, state)),
-            session_id,
-            authed: true,
-            user_id: 0,
-        })
+        let session = Session::from_rpc(Rpc::new(Connection::new(stream, state)), session_id, true);
+        session.go_live().await?;
+        Ok(session)
     }
 
-    pub async fn help_get_config(&mut self) -> Result<HelpConfig> {
-        self.rpc.invoke(&HelpGetConfig).await
+    pub async fn help_get_config(&self) -> Result<HelpConfig> {
+        self.invoke(&HelpGetConfig).await
     }
 
     pub async fn send_email_code(
-        &mut self,
+        &self,
         email: &str,
         purpose: &str,
         device_id: i64,
     ) -> Result<AuthSentCode> {
-        self.rpc
-            .invoke(&AuthSendEmailCode {
-                email: email.to_string(),
-                purpose: purpose.to_string(),
-                device_id,
-            })
-            .await
+        self.invoke(&AuthSendEmailCode {
+            email: email.to_string(),
+            purpose: purpose.to_string(),
+            device_id,
+        })
+        .await
     }
 
     pub async fn verify_email_code(
-        &mut self,
+        &self,
         email: &str,
         email_hash: Vec<u8>,
         code: &str,
     ) -> Result<AuthVerified> {
-        self.rpc
-            .invoke(&AuthVerifyEmailCode {
-                email: email.to_string(),
-                email_hash,
-                code: code.to_string(),
-            })
-            .await
+        self.invoke(&AuthVerifyEmailCode {
+            email: email.to_string(),
+            email_hash,
+            code: code.to_string(),
+        })
+        .await
     }
 
     /// Confirms the emailed code and completes the handshake.
@@ -96,7 +225,7 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
     /// so it costs a round trip over the internet that the user waits out on
     /// the confirm button.
     pub async fn verify_and_authenticate<R: RngCore + CryptoRng>(
-        &mut self,
+        &self,
         email: &str,
         email_hash: Vec<u8>,
         code: &str,
@@ -104,10 +233,15 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         server_ed_pub: &[u8; 32],
         rng: &mut R,
     ) -> Result<EstablishedSecure> {
+        // Held for the whole exchange: the auth key does not exist until it is
+        // nearly over, and the connection's secure state is rewritten at the
+        // end. Nothing else may use the socket in between.
+        let mut guard = self.handshake.lock().await;
+        let rpc = guard.as_mut().ok_or(NetError::Closed)?;
+
         let (client, begin) =
             proto::ClientHandshake::begin(Vec::new(), client_info, self.session_id, rng);
-        let opened: tl::generated::AuthVerifiedHandshake = self
-            .rpc
+        let opened: tl::generated::AuthVerifiedHandshake = rpc
             .invoke(&tl::generated::AuthVerifyAndBegin {
                 email: email.to_string(),
                 email_hash,
@@ -135,25 +269,30 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         //
         // The cost is where a rejection surfaces: instead of failing here, a
         // refused proof shows up as the next request being unauthenticated.
-        self.rpc.send(&finish).await?;
+        rpc.send(&finish).await?;
 
         let mut established = finishing.into_established();
         established.username = opened.username;
-        apply_authed_state(self.rpc.connection_mut(), &established);
-        self.authed = true;
-        self.user_id = opened.user_id;
+        apply_authed_state(rpc.connection_mut(), &established);
+        self.authed.store(true, Ordering::Release);
+        self.user_id.store(opened.user_id, Ordering::Release);
+        drop(guard);
+        // The state is settled, so the socket can be handed to its reader.
+        self.go_live().await?;
         Ok(established)
     }
 
     pub async fn authenticate<R: RngCore + CryptoRng>(
-        &mut self,
+        &self,
         verified: &AuthVerified,
         client_info: Vec<u8>,
         server_ed_pub: &[u8; 32],
         rng: &mut R,
     ) -> Result<EstablishedSecure> {
+        let mut guard = self.handshake.lock().await;
+        let rpc = guard.as_mut().ok_or(NetError::Closed)?;
         let est = run_handshake(
-            &mut self.rpc,
+            rpc,
             verified.tmp_token.clone(),
             client_info,
             self.session_id,
@@ -161,29 +300,23 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
             rng,
         )
         .await?;
-        self.authed = true;
-        self.user_id = verified.user_id;
+        self.authed.store(true, Ordering::Release);
+        self.user_id.store(verified.user_id, Ordering::Release);
+        drop(guard);
+        self.go_live().await?;
         Ok(est)
     }
 
     pub fn is_authenticated(&self) -> bool {
-        self.authed
+        self.authed.load(Ordering::Acquire)
     }
 
     pub fn user_id(&self) -> i64 {
-        self.user_id
+        self.user_id.load(Ordering::Acquire)
     }
 
     pub fn session_id(&self) -> u64 {
         self.session_id
-    }
-
-    pub fn rpc_mut(&mut self) -> &mut Rpc<S> {
-        &mut self.rpc
-    }
-
-    pub fn into_rpc(self) -> Rpc<S> {
-        self.rpc
     }
 }
 
@@ -456,8 +589,9 @@ mod tests {
         assert!(session.is_authenticated());
         assert_eq!(session.user_id(), 5001);
 
+        // Through the live transport: authenticating hands the socket to its
+        // own reader, so this exercises the switch as well as the ping.
         let pong: Pong = session
-            .rpc_mut()
             .invoke(&Ping { ping_id: 3 })
             .await
             .expect("authed ping");
