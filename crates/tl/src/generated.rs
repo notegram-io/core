@@ -3926,6 +3926,48 @@ impl TlObject for MessagesAckEncrypted {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesAckEncryptedBatch {
+    pub server_msg_i_ds: Vec<String>,
+}
+
+impl TlObject for MessagesAckEncryptedBatch {
+    const CTOR: u32 = 0x5f8c31d7;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.server_msg_i_ds;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let server_msg_i_ds = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { server_msg_i_ds })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessagesDeliveredResult {
     pub delivered: Vec<String>,
 }
@@ -4083,6 +4125,48 @@ impl TlObject for MessagesEncryptedBatch {
         };
         d.leave();
         Ok(Self { items })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesEncryptedBatchAcked {
+    pub deleted: Vec<String>,
+}
+
+impl TlObject for MessagesEncryptedBatchAcked {
+    const CTOR: u32 = 0x91e4b20a;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.deleted;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let deleted = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { deleted })
     }
 }
 

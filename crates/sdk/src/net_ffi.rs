@@ -693,4 +693,20 @@ impl NetSession {
             .await?;
         Ok(r.deleted)
     }
+
+    /// Acknowledges a batch in one round trip, returning the ids the server
+    /// dropped. A burst otherwise costs a request per message, in sequence,
+    /// which is most of what a busy chat feels as slowness.
+    pub async fn ack_encrypted_batch(
+        &self,
+        server_msg_ids: Vec<String>,
+    ) -> Result<Vec<String>, FfiNetError> {
+        let r = self
+            .inner
+            .lock()
+            .await
+            .ack_encrypted_batch(server_msg_ids)
+            .await?;
+        Ok(r.deleted)
+    }
 }

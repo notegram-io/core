@@ -93,13 +93,21 @@ mod tests {
         decode_from::<Req>(&invoke.query, Limits::default()).unwrap()
     }
 
+    /// Answers the request just read, in the envelope naming it — the way the
+    /// real server replies. A bare object is a server-initiated notice, not an
+    /// answer, so a fake that sends one leaves the client waiting.
     async fn send_obj<S, T>(conn: &mut Connection<S>, obj: &T)
     where
         S: AsyncRead + AsyncWrite + Unpin,
         T: TlObject,
     {
-        let b = encode_to_vec(obj).unwrap();
-        conn.send_frames(&[&b]).await.unwrap();
+        let body = encode_to_vec(obj).unwrap();
+        let answer = encode_to_vec(&tl::generated::RpcAnswer {
+            req_msg_id: conn.last_read_msg_id() as i64,
+            body,
+        })
+        .unwrap();
+        conn.send_frames(&[&answer]).await.unwrap();
     }
 
     fn authed_state(session_id: u64, auth_key: [u8; 32], dir: u8) -> SecureState {

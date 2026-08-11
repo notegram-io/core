@@ -11,6 +11,7 @@ pub struct Connection<S> {
     stream: S,
     state: SecureState,
     max_frame: usize,
+    last_read_msg_id: u64,
 }
 
 impl<S> Connection<S> {
@@ -19,6 +20,7 @@ impl<S> Connection<S> {
             stream,
             state,
             max_frame: DEFAULT_MAX_FRAME,
+            last_read_msg_id: 0,
         }
     }
 
@@ -31,6 +33,13 @@ impl<S> Connection<S> {
         &mut self.state
     }
 
+    /// The msg_id of the last frame read, which is what a reply to it has to
+    /// name in `RpcAnswer.ReqMsgID`. Mirrors the server side, where answering
+    /// without naming the request leaves a pipelined caller waiting forever.
+    pub fn last_read_msg_id(&self) -> u64 {
+        self.last_read_msg_id
+    }
+
     pub fn state(&self) -> &SecureState {
         &self.state
     }
@@ -41,7 +50,13 @@ impl<S> Connection<S> {
 }
 
 impl<S: AsyncWrite + Unpin> Connection<S> {
-    pub async fn send_container(&mut self, container: &[u8]) -> Result<()> {
+    /// Sends `container` and reports the transport msg_id it went out under.
+    ///
+    /// The id is what a reply names in `RpcAnswer.ReqMsgID`, so a caller that
+    /// keeps it can have several requests in flight and still know which answer
+    /// belongs to which. Without it replies can only be matched positionally,
+    /// which forces every request to wait for the one before it.
+    pub async fn send_container(&mut self, container: &[u8]) -> Result<u64> {
         let msg_id = self.state.next_msg_id(unix_millis());
         let seq_no = self.state.next_seq();
         let params = SealParams {
@@ -57,10 +72,10 @@ impl<S: AsyncWrite + Unpin> Connection<S> {
         let frame = seal_frame(&params, container)?;
         self.stream.write_all(&frame).await?;
         self.stream.flush().await?;
-        Ok(())
+        Ok(msg_id)
     }
 
-    pub async fn send_frames(&mut self, frames: &[&[u8]]) -> Result<()> {
+    pub async fn send_frames(&mut self, frames: &[&[u8]]) -> Result<u64> {
         self.send_container(&pack_container(frames)).await
     }
 }
@@ -92,6 +107,7 @@ impl<S: AsyncRead + Unpin> Connection<S> {
                 got: header.direction,
             });
         }
+        self.last_read_msg_id = header.msg_id;
         Ok((header, container))
     }
 

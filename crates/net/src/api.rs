@@ -5,8 +5,9 @@ use tl::generated::{
     DirectoryGetMyUsername, DirectoryGetProfile, DirectoryProfile, DirectoryResolveUsername,
     DirectoryResolved, DirectorySetProfile, DirectoryUsername, KeysDeviceSigningKey,
     KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
-    KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesDeliveryStatus, MessagesEncryptedAcked,
-    MessagesEncryptedBatch, MessagesEncryptedRecipient, MessagesEncryptedSent,
+    KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesAckEncryptedBatch,
+    MessagesDeliveryStatus, MessagesEncryptedAcked, MessagesEncryptedBatch,
+    MessagesEncryptedBatchAcked, MessagesEncryptedRecipient, MessagesEncryptedSent,
     MessagesGetDeliveryStatus, MessagesGetEncrypted, MessagesSendEncrypted, OneTimePreKey, Ping,
     Pong, PushRegisterToken, PushTokenRegistered, PushTokenUnregistered, PushUnregisterToken,
     UpdateMessageDelivered, UpdateNewMessages,
@@ -224,6 +225,24 @@ impl<S: AsyncRead + AsyncWrite + Unpin> Session<S> {
         self.rpc_mut()
             .invoke(&MessagesAckEncrypted {
                 server_msg_id: server_msg_id.to_string(),
+            })
+            .await
+    }
+
+    /// Acknowledges a whole batch in one round trip.
+    ///
+    /// One request per message, in sequence, is what a burst used to cost — the
+    /// messages were already fetched and decrypted by then, so the waiting was
+    /// pure protocol overhead. Returns the ids the server actually dropped,
+    /// which lets a caller tell a real ack from a repeat of one it had already
+    /// sent.
+    pub async fn ack_encrypted_batch(
+        &mut self,
+        server_msg_ids: Vec<String>,
+    ) -> Result<MessagesEncryptedBatchAcked> {
+        self.rpc_mut()
+            .invoke(&MessagesAckEncryptedBatch {
+                server_msg_i_ds: server_msg_ids,
             })
             .await
     }
