@@ -7,10 +7,11 @@ use tl::generated::{
     KeysGetMyStatus, KeysGetPeerBundle, KeysPeerBundle, KeysSetDeviceSigningKey, KeysStatus,
     KeysUpload, KeysUploaded, MessagesAckEncrypted, MessagesAckEncryptedBatch,
     MessagesDeliveryStatus, MessagesEncryptedAcked, MessagesEncryptedBatch,
-    MessagesEncryptedBatchAcked, MessagesEncryptedRecipient, MessagesEncryptedSent,
-    MessagesGetDeliveryStatus, MessagesGetEncrypted, MessagesSendEncrypted, OneTimePreKey, Ping,
-    Pong, PushRegisterToken, PushTokenRegistered, PushTokenUnregistered, PushUnregisterToken,
-    UpdateMessageDelivered, UpdateNewMessages,
+    MessagesEncryptedBatchAcked, MessagesEncryptedRecalled, MessagesEncryptedRecipient,
+    MessagesEncryptedSent, MessagesGetDeliveryStatus, MessagesGetEncrypted,
+    MessagesRecallEncrypted, MessagesSendEncrypted, OneTimePreKey, Ping, Pong, PushRegisterToken,
+    PushTokenRegistered, PushTokenUnregistered, PushUnregisterToken, UpdateMessageDelivered,
+    UpdateNewMessages,
 };
 use tl::TlObject;
 
@@ -224,6 +225,24 @@ impl<S: AsyncRead + AsyncWrite + Unpin + Send + 'static> Session<S> {
     /// pure protocol overhead. Returns the ids the server actually dropped,
     /// which lets a caller tell a real ack from a repeat of one it had already
     /// sent.
+    /// Withdraws the sender's own envelopes that nobody has collected yet, for
+    /// messages being deleted. Returns the ids that still had something to
+    /// withdraw.
+    ///
+    /// Never the whole of a deletion: anything already fetched is beyond
+    /// recall, and only the encrypted notice reaches the copy the recipient
+    /// holds. This spares a recipient receiving what its author already
+    /// withdrew.
+    pub async fn recall_encrypted(
+        &self,
+        client_msg_ids: Vec<String>,
+    ) -> Result<MessagesEncryptedRecalled> {
+        self.invoke(&MessagesRecallEncrypted {
+            client_msg_i_ds: client_msg_ids,
+        })
+        .await
+    }
+
     pub async fn ack_encrypted_batch(
         &self,
         server_msg_ids: Vec<String>,

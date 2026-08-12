@@ -4354,6 +4354,48 @@ impl TlObject for MessagesEncryptedDelivery {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesEncryptedRecalled {
+    pub recalled: Vec<String>,
+}
+
+impl TlObject for MessagesEncryptedRecalled {
+    const CTOR: u32 = 0xb40c7e52;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.recalled;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let recalled = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { recalled })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessagesEncryptedRecipient {
     pub user_id: i64,
     pub device_id: i64,
@@ -4640,6 +4682,48 @@ impl TlObject for MessagesQueryDelivered {
             sender_device_id,
             client_msg_i_ds,
         })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessagesRecallEncrypted {
+    pub client_msg_i_ds: Vec<String>,
+}
+
+impl TlObject for MessagesRecallEncrypted {
+    const CTOR: u32 = 0x6d3f81ab;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.client_msg_i_ds;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let client_msg_i_ds = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        d.leave();
+        Ok(Self { client_msg_i_ds })
     }
 }
 

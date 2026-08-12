@@ -649,6 +649,16 @@ impl NetSession {
     /// Acknowledges a batch in one round trip, returning the ids the server
     /// dropped. A burst otherwise costs a request per message, in sequence,
     /// which is most of what a busy chat feels as slowness.
+    /// Withdraws undelivered copies of messages being deleted, returning the
+    /// ids that were still there to withdraw.
+    pub async fn recall_encrypted(
+        &self,
+        client_msg_ids: Vec<String>,
+    ) -> Result<Vec<String>, FfiNetError> {
+        let r = self.inner.recall_encrypted(client_msg_ids).await?;
+        Ok(r.recalled)
+    }
+
     pub async fn ack_encrypted_batch(
         &self,
         server_msg_ids: Vec<String>,
