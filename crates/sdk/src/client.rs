@@ -881,6 +881,23 @@ impl<B: Backend> NotegramClient<B> {
         Ok(None)
     }
 
+    /// Queues an already-encrypted instruction — an edit or a deletion — with
+    /// no row of its own in history.
+    ///
+    /// It has to be delivered as reliably as a message, so it belongs in the
+    /// queue; but it is a change to a message that already exists rather than
+    /// a new one, so it must never appear in the transcript. The envelopes are
+    /// supplied because an instruction is encrypted before it is queued: there
+    /// is no history row to rebuild its body from later.
+    pub fn enqueue_outbox_instruction(&mut self, entry: &OutboxEntry) -> Result<()> {
+        self.store.put(
+            Namespace::Outbox,
+            &outbox::outbox_key(entry.created_at, &entry.client_msg_id),
+            &outbox::encode_entry(entry),
+        )?;
+        Ok(())
+    }
+
     /// Everything still waiting, oldest first.
     ///
     /// The order is the order the user typed in, and a caller must send them in

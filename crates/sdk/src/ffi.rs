@@ -817,6 +817,13 @@ impl NotegramCore {
             .map(FfiStoredMessage::from))
     }
 
+    /// Queues an already-encrypted edit or deletion. It is delivered like any
+    /// message — retried until it lands — but never appears in the transcript,
+    /// because it changes a message rather than being one.
+    pub fn enqueue_outbox_instruction(&self, entry: FfiOutboxEntry) -> Result<(), FfiError> {
+        Ok(self.lock().enqueue_outbox_instruction(&entry.into())?)
+    }
+
     /// Everything still waiting, oldest first. Send them in this order: a chat
     /// delivered out of order stays wrong for the recipient.
     pub fn pending_outbox(&self) -> Result<Vec<FfiOutboxEntry>, FfiError> {
