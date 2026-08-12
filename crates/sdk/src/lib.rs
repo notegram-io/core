@@ -22,7 +22,7 @@ pub use client::{
     RecipientPreKeyBundle,
 };
 pub use identity::{Identity, PublicIdentity};
-pub use messages::{message_ref, MessageStatus, StoredMessage};
+pub use messages::{message_ref, MessageStatus, Revision, StoredMessage};
 pub use outbox::{OutboxEntry, OutboxRecipient};
 pub use session::{InboundPreKeys, PeerAddress, PreKeyBundle};
 

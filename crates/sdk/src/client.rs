@@ -4,7 +4,9 @@ use store::{Backend, Namespace, SecureStore};
 
 use crate::body::MessageBody;
 use crate::identity::{Identity, PublicIdentity};
-use crate::messages::{self, MessageStatus, StoredMessage};
+use crate::messages::{
+    self, decode_revision, encode_revision, revision_key, MessageStatus, Revision, StoredMessage,
+};
 use crate::outbox::{self, OutboxEntry, OutboxRecipient};
 use crate::session::{
     establish_inbound, establish_outbound, InboundPreKeys, PeerAddress, PreKeyBundle,
@@ -649,6 +651,8 @@ impl<B: Backend> NotegramClient<B> {
             reply_to: entry.reply_to,
             forwarded_from: None,
             forwarded_at: None,
+            edited_at: None,
+            deleted_at: None,
         };
         self.save_message(&message)?;
         self.store.put(
@@ -682,6 +686,179 @@ impl<B: Backend> NotegramClient<B> {
         self.store
             .put(Namespace::Outbox, &key, &outbox::encode_entry(&entry))?;
         Ok(true)
+    }
+
+    /// Rewrites a message the author has edited.
+    ///
+    /// `from_peer` is who the instruction came from, taken from the AEAD
+    /// associated data rather than from anything the server said: `None` means
+    /// this device wrote it. **An edit may only touch a message from the same
+    /// author** — without that rule a peer could rewrite words in your history
+    /// that you wrote, which is a worse power than being able to send you
+    /// anything.
+    ///
+    /// A deleted message stays deleted: an edit naming it is ignored rather
+    /// than bringing it back.
+    ///
+    /// Returns false when the target is not here yet — the caller keeps the
+    /// instruction and offers it again, since an edit that arrives before the
+    /// message it edits must not be the one thing that gets lost.
+    pub fn apply_edit(
+        &mut self,
+        chat_id: i64,
+        target_client_msg_id: &str,
+        text: &str,
+        edited_at: i64,
+        from_peer: Option<i64>,
+    ) -> Result<bool> {
+        let Some((key, mut msg)) = self.find_message(chat_id, target_client_msg_id)? else {
+            return Ok(false);
+        };
+        if !Self::may_revise(&msg, from_peer) {
+            return Err(SdkError::MisattributedMessage);
+        }
+        // Deletion is final; and a late edit must not undo a later one.
+        if msg.deleted_at.is_some() || msg.edited_at.is_some_and(|prev| prev >= edited_at) {
+            return Ok(true);
+        }
+        msg.text = text.to_string();
+        msg.edited_at = Some(edited_at);
+        self.store
+            .put(Namespace::Message, &key, &messages::encode_message(&msg))?;
+        Ok(true)
+    }
+
+    /// Withdraws a message its author deleted, keeping the row as a tombstone
+    /// with its words cleared. Same authorship rule as [`Self::apply_edit`].
+    ///
+    /// Returns false when the target is not here yet, for the same reason.
+    pub fn apply_delete(
+        &mut self,
+        chat_id: i64,
+        target_client_msg_id: &str,
+        deleted_at: i64,
+        from_peer: Option<i64>,
+    ) -> Result<bool> {
+        let Some((key, mut msg)) = self.find_message(chat_id, target_client_msg_id)? else {
+            return Ok(false);
+        };
+        if !Self::may_revise(&msg, from_peer) {
+            return Err(SdkError::MisattributedMessage);
+        }
+        if msg.deleted_at.is_some() {
+            return Ok(true);
+        }
+        // The words go, not just a flag: keeping the text of something the
+        // author withdrew is exactly what a deletion is for.
+        msg.text = String::new();
+        msg.deleted_at = Some(deleted_at);
+        self.store
+            .put(Namespace::Message, &key, &messages::encode_message(&msg))?;
+        Ok(true)
+    }
+
+    /// Applies an edit or delete, holding on to it if its target has not
+    /// arrived yet.
+    ///
+    /// An instruction can overtake the message it refers to — a page that
+    /// failed to decrypt, a peer with two devices — and simply dropping it
+    /// would leave the reader looking at words the author has already changed
+    /// or withdrawn, permanently and invisibly. Held instructions are retried
+    /// by [`Self::apply_pending_revisions`] whenever new messages land.
+    pub fn apply_revision(
+        &mut self,
+        chat_id: i64,
+        revision: &Revision,
+        from_peer: Option<i64>,
+    ) -> Result<bool> {
+        let applied = match revision {
+            Revision::Edit { target, text, at } => {
+                self.apply_edit(chat_id, target, text, *at, from_peer)?
+            }
+            Revision::Delete { target, at } => {
+                self.apply_delete(chat_id, target, *at, from_peer)?
+            }
+        };
+        if !applied {
+            self.store.put(
+                Namespace::PendingRevision,
+                &revision_key(chat_id, revision.target()),
+                &encode_revision(chat_id, revision, from_peer),
+            )?;
+        }
+        Ok(applied)
+    }
+
+    /// Retries held instructions now that more messages are in. Returns how
+    /// many finally applied.
+    ///
+    /// Cheap when there is nothing waiting, which is the normal case, so this
+    /// can run after every batch.
+    pub fn apply_pending_revisions(&mut self) -> Result<u32> {
+        let held = self.store.list(Namespace::PendingRevision)?;
+        if held.is_empty() {
+            return Ok(0);
+        }
+        let mut applied = 0;
+        for (key, value) in held {
+            let (chat_id, revision, from_peer) = decode_revision(&value)?;
+            // A rejected instruction — one that named someone else's message —
+            // is dropped rather than retried forever.
+            let outcome = self.apply_revision_once(chat_id, &revision, from_peer);
+            match outcome {
+                Ok(true) | Err(_) => {
+                    self.store.delete(Namespace::PendingRevision, &key)?;
+                    if outcome.is_ok() {
+                        applied += 1;
+                    }
+                }
+                Ok(false) => {}
+            }
+        }
+        Ok(applied)
+    }
+
+    fn apply_revision_once(
+        &mut self,
+        chat_id: i64,
+        revision: &Revision,
+        from_peer: Option<i64>,
+    ) -> Result<bool> {
+        match revision {
+            Revision::Edit { target, text, at } => {
+                self.apply_edit(chat_id, target, text, *at, from_peer)
+            }
+            Revision::Delete { target, at } => self.apply_delete(chat_id, target, *at, from_peer),
+        }
+    }
+
+    /// Whether an instruction from `from_peer` is allowed to change `msg`.
+    ///
+    /// Only its author may: this device for its own outgoing messages, and a
+    /// peer only for messages that came from that same peer.
+    fn may_revise(msg: &StoredMessage, from_peer: Option<i64>) -> bool {
+        match from_peer {
+            None => msg.outgoing,
+            Some(peer) => !msg.outgoing && msg.peer_user_id == peer,
+        }
+    }
+
+    fn find_message(
+        &self,
+        chat_id: i64,
+        client_msg_id: &str,
+    ) -> Result<Option<(Vec<u8>, StoredMessage)>> {
+        let prefix = messages::chat_key_prefix(chat_id);
+        for (key, value) in self.store.list(Namespace::Message)? {
+            if !key.starts_with(&prefix) {
+                continue;
+            }
+            let msg = messages::decode_message(&value)?;
+            if msg.client_msg_id == client_msg_id {
+                return Ok(Some((key, msg)));
+            }
+        }
+        Ok(None)
     }
 
     /// One message of a chat by the id its sender chose, for a caller that has

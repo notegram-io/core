@@ -3523,6 +3523,93 @@ impl TlObject for MessageAssociatedData {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessageBodyDeleted {
+    pub target_client_msg_i_ds: Vec<String>,
+    pub deleted_at: i64,
+}
+
+impl TlObject for MessageBodyDeleted {
+    const CTOR: u32 = 0xe2ee000d;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        {
+            let __v = &self.target_client_msg_i_ds;
+            e.vector_header(__v.len())?;
+            for __x in __v {
+                e.string(__x)?;
+            }
+        }
+        e.long(self.deleted_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let target_client_msg_i_ds = {
+            let __n = d.vector_header()?;
+            let mut __v = Vec::with_capacity(__n);
+            for _ in 0..__n {
+                __v.push(d.string()?);
+            }
+            __v
+        };
+        let deleted_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            target_client_msg_i_ds,
+            deleted_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct MessageBodyEdit {
+    pub target_client_msg_id: String,
+    pub text: String,
+    pub edited_at: i64,
+}
+
+impl TlObject for MessageBodyEdit {
+    const CTOR: u32 = 0xe2ee000c;
+
+    fn encode(&self, e: &mut Encoder) -> Result<()> {
+        e.ctor(Self::CTOR);
+        e.string(&self.target_client_msg_id)?;
+        e.string(&self.text)?;
+        e.long(self.edited_at);
+        Ok(())
+    }
+
+    fn decode(d: &mut Decoder) -> Result<Self> {
+        let ctor = d.ctor()?;
+        if ctor != Self::CTOR {
+            return Err(crate::TlError::UnexpectedCtor {
+                expected: Self::CTOR,
+                got: ctor,
+            });
+        }
+        d.enter()?;
+        let target_client_msg_id = d.string()?;
+        let text = d.string()?;
+        let edited_at = d.long()?;
+        d.leave();
+        Ok(Self {
+            target_client_msg_id,
+            text,
+            edited_at,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MessageBodyForwarded {
     pub text: String,
     pub origin_username: String,

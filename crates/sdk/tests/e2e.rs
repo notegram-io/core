@@ -187,6 +187,8 @@ fn message_history_is_per_chat_and_chronological() {
             reply_to: None,
             forwarded_from: None,
             forwarded_at: None,
+            edited_at: None,
+            deleted_at: None,
         };
 
     // Saved out of order and across two chats.
@@ -321,6 +323,8 @@ fn delivery_status_advances_but_never_regresses() {
         reply_to: None,
         forwarded_from: None,
         forwarded_at: None,
+        edited_at: None,
+        deleted_at: None,
     };
     client.save_message(&outgoing).unwrap();
 
@@ -559,6 +563,8 @@ fn a_receipt_marks_everything_sent_up_to_its_watermark() {
         reply_to: None,
         forwarded_from: None,
         forwarded_at: None,
+        edited_at: None,
+        deleted_at: None,
     };
     client.save_message(&msg(100, "a", true)).unwrap();
     client.save_message(&msg(200, "b", true)).unwrap();
@@ -707,5 +713,204 @@ mod outbox {
 
         assert!(!client.note_outbox_attempt("c-1", 1000).unwrap());
         assert!(client.pending_outbox().unwrap().is_empty());
+    }
+}
+
+mod revisions {
+    use super::*;
+    use sdk::{MessageStatus, Revision, StoredMessage};
+
+    const CHAT: i64 = 42;
+    const PEER: i64 = 7;
+
+    fn message(client_msg_id: &str, outgoing: bool, text: &str) -> StoredMessage {
+        StoredMessage {
+            chat_id: CHAT,
+            peer_user_id: PEER,
+            outgoing,
+            client_msg_id: client_msg_id.to_string(),
+            text: text.to_string(),
+            created_at: 1_000,
+            status: MessageStatus::Sent,
+            reply_to: None,
+            forwarded_from: None,
+            forwarded_at: None,
+            edited_at: None,
+            deleted_at: None,
+        }
+    }
+
+    fn only(client: &NotegramClient<MemoryBackend>) -> StoredMessage {
+        let all = client.list_messages(CHAT, 0).unwrap();
+        assert_eq!(all.len(), 1, "expected exactly one message");
+        all.into_iter().next().unwrap()
+    }
+
+    #[test]
+    fn an_author_can_rewrite_their_own_message() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.save_message(&message("m-1", true, "frist")).unwrap();
+
+        assert!(client
+            .apply_edit(CHAT, "m-1", "first", 2_000, None)
+            .unwrap());
+        let msg = only(&client);
+        assert_eq!(msg.text, "first");
+        assert_eq!(msg.edited_at, Some(2_000));
+    }
+
+    /// The rule that matters most. Without it a peer could rewrite words in
+    /// your history that you wrote — a worse power than being able to send you
+    /// anything at all.
+    #[test]
+    fn a_peer_cannot_rewrite_a_message_you_wrote() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client
+            .save_message(&message("mine", true, "what I said"))
+            .unwrap();
+
+        let refused = client.apply_edit(CHAT, "mine", "what they claim", 2_000, Some(PEER));
+        assert!(
+            refused.is_err(),
+            "an edit from a peer must not touch your own message"
+        );
+        assert_eq!(only(&client).text, "what I said");
+    }
+
+    /// And the mirror: this device may not rewrite what the peer wrote either.
+    #[test]
+    fn you_cannot_rewrite_a_message_the_peer_wrote() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client
+            .save_message(&message("theirs", false, "their words"))
+            .unwrap();
+
+        assert!(client
+            .apply_edit(CHAT, "theirs", "not their words", 2_000, None)
+            .is_err());
+        assert_eq!(only(&client).text, "their words");
+    }
+
+    #[test]
+    fn a_peer_can_rewrite_their_own_message() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client
+            .save_message(&message("theirs", false, "typo"))
+            .unwrap();
+
+        assert!(client
+            .apply_edit(CHAT, "theirs", "fixed", 2_000, Some(PEER))
+            .unwrap());
+        assert_eq!(only(&client).text, "fixed");
+    }
+
+    /// A tombstone, not a removal: the row stays so a redelivered envelope
+    /// cannot quietly bring the message back, and the words go so nothing is
+    /// kept of what the author withdrew.
+    #[test]
+    fn deleting_clears_the_words_and_leaves_a_tombstone() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client
+            .save_message(&message("m-1", true, "regrettable"))
+            .unwrap();
+
+        assert!(client.apply_delete(CHAT, "m-1", 3_000, None).unwrap());
+        let msg = only(&client);
+        assert_eq!(msg.text, "");
+        assert_eq!(msg.deleted_at, Some(3_000));
+    }
+
+    #[test]
+    fn a_deleted_message_cannot_be_edited_back_into_existence() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.save_message(&message("m-1", true, "gone")).unwrap();
+        client.apply_delete(CHAT, "m-1", 3_000, None).unwrap();
+
+        assert!(client.apply_edit(CHAT, "m-1", "back", 4_000, None).unwrap());
+        let msg = only(&client);
+        assert_eq!(msg.text, "", "a deletion is final");
+        assert_eq!(msg.deleted_at, Some(3_000));
+    }
+
+    /// Instructions can arrive out of order; the older one must not win.
+    #[test]
+    fn a_late_edit_does_not_undo_a_newer_one() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.save_message(&message("m-1", true, "v1")).unwrap();
+
+        client.apply_edit(CHAT, "m-1", "v3", 3_000, None).unwrap();
+        client.apply_edit(CHAT, "m-1", "v2", 2_000, None).unwrap();
+        assert_eq!(only(&client).text, "v3");
+    }
+
+    /// An edit can overtake the message it edits. Dropping it would leave the
+    /// reader on text the author has already changed, permanently.
+    #[test]
+    fn an_edit_that_arrives_first_is_held_and_applied_later() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+
+        let held = Revision::Edit {
+            target: "m-1".to_string(),
+            text: "corrected".to_string(),
+            at: 2_000,
+        };
+        assert!(!client.apply_revision(CHAT, &held, Some(PEER)).unwrap());
+
+        // Now the message itself lands.
+        client
+            .save_message(&message("m-1", false, "original"))
+            .unwrap();
+        assert_eq!(client.apply_pending_revisions().unwrap(), 1);
+        assert_eq!(only(&client).text, "corrected");
+
+        // And the queue is empty rather than replaying forever.
+        assert_eq!(client.apply_pending_revisions().unwrap(), 0);
+    }
+
+    #[test]
+    fn a_delete_that_arrives_first_is_held_and_applied_later() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+
+        let held = Revision::Delete {
+            target: "m-1".to_string(),
+            at: 2_000,
+        };
+        assert!(!client.apply_revision(CHAT, &held, Some(PEER)).unwrap());
+
+        client
+            .save_message(&message("m-1", false, "arrives late"))
+            .unwrap();
+        assert_eq!(client.apply_pending_revisions().unwrap(), 1);
+        assert_eq!(only(&client).text, "");
+        assert!(only(&client).deleted_at.is_some());
+    }
+
+    /// A held instruction that turns out to name someone else's message is
+    /// dropped rather than retried on every batch forever.
+    #[test]
+    fn a_held_instruction_for_a_message_it_may_not_touch_is_discarded() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+
+        let held = Revision::Edit {
+            target: "mine".to_string(),
+            text: "hijacked".to_string(),
+            at: 2_000,
+        };
+        assert!(!client.apply_revision(CHAT, &held, Some(PEER)).unwrap());
+
+        client
+            .save_message(&message("mine", true, "what I said"))
+            .unwrap();
+        assert_eq!(
+            client.apply_pending_revisions().unwrap(),
+            0,
+            "refused, not applied"
+        );
+        assert_eq!(only(&client).text, "what I said");
+        assert_eq!(
+            client.apply_pending_revisions().unwrap(),
+            0,
+            "and not retried forever"
+        );
     }
 }

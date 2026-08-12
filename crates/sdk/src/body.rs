@@ -6,7 +6,10 @@
 //! covers. Nothing about read state ever reaches the server in the clear, which
 //! is why receipts are not modelled the way delivery notices are.
 
-use tl::generated::{MessageBodyForwarded, MessageBodyReadReceipt, MessageBodyText};
+use tl::generated::{
+    MessageBodyDeleted, MessageBodyEdit, MessageBodyForwarded, MessageBodyReadReceipt,
+    MessageBodyText,
+};
 use tl::TlObject;
 
 /// A decrypted payload.
@@ -30,6 +33,23 @@ pub enum MessageBody {
         origin_username: String,
         origin_created_at: i64,
     },
+    /// New text for a message the sender wrote earlier, named by the client id
+    /// they chose for it.
+    ///
+    /// Only ever applicable to that sender's own messages — a recipient that
+    /// applied it to anything else would let a peer rewrite words it did not
+    /// write. Enforced where it is applied, not here.
+    Edit {
+        target_client_msg_id: String,
+        text: String,
+        edited_at: i64,
+    },
+    /// Messages the sender has withdrawn. A list, so a selection costs one
+    /// message rather than one each.
+    Deleted {
+        target_client_msg_ids: Vec<String>,
+        deleted_at: i64,
+    },
 }
 
 impl MessageBody {
@@ -51,6 +71,24 @@ impl MessageBody {
                 text: text.clone(),
                 origin_username: origin_username.clone(),
                 origin_created_at: *origin_created_at,
+            })
+            .expect("message body encodes"),
+            MessageBody::Edit {
+                target_client_msg_id,
+                text,
+                edited_at,
+            } => tl::encode_to_vec(&MessageBodyEdit {
+                target_client_msg_id: target_client_msg_id.clone(),
+                text: text.clone(),
+                edited_at: *edited_at,
+            })
+            .expect("message body encodes"),
+            MessageBody::Deleted {
+                target_client_msg_ids,
+                deleted_at,
+            } => tl::encode_to_vec(&MessageBodyDeleted {
+                target_client_msg_i_ds: target_client_msg_ids.clone(),
+                deleted_at: *deleted_at,
             })
             .expect("message body encodes"),
         }
@@ -85,6 +123,25 @@ impl MessageBody {
                     Err(_) => MessageBody::Text(lossy_text(raw)),
                 }
             }
+            Some(MessageBodyEdit::CTOR) => {
+                match tl::decode_from::<MessageBodyEdit>(raw, tl::Limits::default()) {
+                    Ok(body) => MessageBody::Edit {
+                        target_client_msg_id: body.target_client_msg_id,
+                        text: body.text,
+                        edited_at: body.edited_at,
+                    },
+                    Err(_) => MessageBody::Text(lossy_text(raw)),
+                }
+            }
+            Some(MessageBodyDeleted::CTOR) => {
+                match tl::decode_from::<MessageBodyDeleted>(raw, tl::Limits::default()) {
+                    Ok(body) => MessageBody::Deleted {
+                        target_client_msg_ids: body.target_client_msg_i_ds,
+                        deleted_at: body.deleted_at,
+                    },
+                    Err(_) => MessageBody::Text(lossy_text(raw)),
+                }
+            }
             _ => MessageBody::Text(lossy_text(raw)),
         }
     }
@@ -96,7 +153,11 @@ impl MessageBody {
         match self {
             MessageBody::Text(text) => text,
             MessageBody::Forwarded { text, .. } => text,
+            MessageBody::Edit { text, .. } => text,
+            // Neither carries anything to show: a receipt is not part of the
+            // conversation, and a deletion is the absence of one.
             MessageBody::ReadReceipt { .. } => "",
+            MessageBody::Deleted { .. } => "",
         }
     }
 }

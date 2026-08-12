@@ -80,6 +80,17 @@ pub struct StoredMessage {
     /// When the original was written, so a forward can show the original date
     /// rather than the moment it was relayed.
     pub forwarded_at: Option<i64>,
+    /// When the author last rewrote this, if they did. What the UI marks as
+    /// edited.
+    pub edited_at: Option<i64>,
+    /// When the author withdrew this.
+    ///
+    /// The row is kept as a tombstone rather than removed, and its text is
+    /// cleared. Removing it outright would let the same envelope, delivered
+    /// again before it was acked, quietly bring the message back; and keeping
+    /// the words of something the author deleted is the one thing a deletion
+    /// is supposed to prevent.
+    pub deleted_at: Option<i64>,
 }
 
 /// Stable 64-bit handle for a message, derived from its `client_msg_id`.
@@ -131,7 +142,7 @@ pub(crate) fn chat_key_prefix(chat_id: i64) -> [u8; 8] {
 
 pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     let mut out = Vec::with_capacity(40 + msg.client_msg_id.len() + msg.text.len());
-    out.push(MESSAGE_FORMAT_V4);
+    out.push(MESSAGE_FORMAT_V5);
     out.extend_from_slice(&msg.chat_id.to_le_bytes());
     out.extend_from_slice(&msg.peer_user_id.to_le_bytes());
     out.push(u8::from(msg.outgoing));
@@ -146,6 +157,10 @@ pub(crate) fn encode_message(msg: &StoredMessage) -> Vec<u8> {
     // no separate presence byte is needed.
     append_str(&mut out, msg.forwarded_from.as_deref().unwrap_or(""));
     out.extend_from_slice(&msg.forwarded_at.unwrap_or(0).to_le_bytes());
+    // 0 reads as "never", which is right for both: a message edited or deleted
+    // at the epoch is not a case, and it saves a presence byte each.
+    out.extend_from_slice(&msg.edited_at.unwrap_or(0).to_le_bytes());
+    out.extend_from_slice(&msg.deleted_at.unwrap_or(0).to_le_bytes());
     out
 }
 
@@ -154,7 +169,7 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     // v1 rows predate delivery status and are still on disk; they read back as
     // Sent rather than being discarded.
     let version = r.u8()?;
-    if !(MESSAGE_FORMAT_V1..=MESSAGE_FORMAT_V4).contains(&version) {
+    if !(MESSAGE_FORMAT_V1..=MESSAGE_FORMAT_V5).contains(&version) {
         return Err(SdkError::BadKeyMaterial);
     }
     let chat_id = r.i64()?;
@@ -190,6 +205,13 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
     } else {
         (None, None)
     };
+    // Same story again: rows written before editing existed stop here and read
+    // back as never edited and never deleted, which is what they are.
+    let (edited_at, deleted_at) = if version >= MESSAGE_FORMAT_V5 {
+        (nonzero(r.i64()?), nonzero(r.i64()?))
+    } else {
+        (None, None)
+    };
     Ok(StoredMessage {
         chat_id,
         peer_user_id,
@@ -201,10 +223,17 @@ pub(crate) fn decode_message(raw: &[u8]) -> Result<StoredMessage, SdkError> {
         reply_to,
         forwarded_from,
         forwarded_at,
+        edited_at,
+        deleted_at,
     })
 }
 
+fn nonzero(value: i64) -> Option<i64> {
+    (value != 0).then_some(value)
+}
+
 const MESSAGE_FORMAT_V1: u8 = 1;
+const MESSAGE_FORMAT_V5: u8 = 5;
 const MESSAGE_FORMAT_V2: u8 = 2;
 const MESSAGE_FORMAT_V3: u8 = 3;
 const MESSAGE_FORMAT_V4: u8 = 4;
@@ -270,6 +299,8 @@ mod tests {
             reply_to: None,
             forwarded_from: None,
             forwarded_at: None,
+            edited_at: None,
+            deleted_at: None,
         }
     }
 
@@ -408,3 +439,90 @@ mod tests {
         }
     }
 }
+
+/// An instruction to change a message that already exists.
+///
+/// Kept as one type because both forms are held and retried the same way when
+/// they overtake the message they refer to.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Revision {
+    Edit {
+        target: String,
+        text: String,
+        at: i64,
+    },
+    Delete {
+        target: String,
+        at: i64,
+    },
+}
+
+impl Revision {
+    pub fn target(&self) -> &str {
+        match self {
+            Revision::Edit { target, .. } => target,
+            Revision::Delete { target, .. } => target,
+        }
+    }
+}
+
+/// Keyed by target, so a second instruction for the same message replaces the
+/// first rather than queueing behind it — the latest is the one that counts.
+pub(crate) fn revision_key(chat_id: i64, target: &str) -> Vec<u8> {
+    let mut key = Vec::with_capacity(8 + target.len());
+    key.extend_from_slice(&chat_id.to_be_bytes());
+    key.extend_from_slice(target.as_bytes());
+    key
+}
+
+pub(crate) fn encode_revision(
+    chat_id: i64,
+    revision: &Revision,
+    from_peer: Option<i64>,
+) -> Vec<u8> {
+    let mut out = Vec::new();
+    out.push(REVISION_FORMAT_V1);
+    out.extend_from_slice(&chat_id.to_le_bytes());
+    // 0 means "from this device"; user ids start at 1.
+    out.extend_from_slice(&from_peer.unwrap_or(0).to_le_bytes());
+    match revision {
+        Revision::Edit { target, text, at } => {
+            out.push(REVISION_EDIT);
+            append_str(&mut out, target);
+            append_str(&mut out, text);
+            out.extend_from_slice(&at.to_le_bytes());
+        }
+        Revision::Delete { target, at } => {
+            out.push(REVISION_DELETE);
+            append_str(&mut out, target);
+            out.extend_from_slice(&at.to_le_bytes());
+        }
+    }
+    out
+}
+
+pub(crate) fn decode_revision(raw: &[u8]) -> Result<(i64, Revision, Option<i64>), SdkError> {
+    let mut r = Reader { b: raw, off: 0 };
+    if r.u8()? != REVISION_FORMAT_V1 {
+        return Err(SdkError::BadKeyMaterial);
+    }
+    let chat_id = r.i64()?;
+    let from_peer = nonzero(r.i64()?);
+    let revision = match r.u8()? {
+        REVISION_EDIT => Revision::Edit {
+            target: r.string()?,
+            text: r.string()?,
+            at: r.i64()?,
+        },
+        REVISION_DELETE => Revision::Delete {
+            target: r.string()?,
+            at: r.i64()?,
+        },
+        _ => return Err(SdkError::BadKeyMaterial),
+    };
+    Ok((chat_id, revision, from_peer))
+}
+
+const REVISION_FORMAT_V1: u8 = 1;
+const REVISION_EDIT: u8 = 1;
+const REVISION_DELETE: u8 = 2;

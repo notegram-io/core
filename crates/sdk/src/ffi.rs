@@ -3,7 +3,7 @@ use std::sync::Mutex;
 use crate::{
     message_ref as sdk_message_ref, Identity, InboundPreKeys, MessageBody, MessageStatus,
     NotegramClient, OutboxEntry, OutboxRecipient, PeerAddress, PreKeyBundle, PublicIdentity,
-    RecipientPreKeyBundle, SdkError, StoredMessage,
+    RecipientPreKeyBundle, Revision, SdkError, StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -152,6 +152,43 @@ pub struct FfiVerifiedPrekeyBundle {
     pub one_time_pre_key_pub: Option<Vec<u8>>,
 }
 
+/// An instruction to change a message that already exists.
+#[derive(uniffi::Enum)]
+pub enum FfiRevision {
+    Edit {
+        target_client_msg_id: String,
+        text: String,
+        at: i64,
+    },
+    Delete {
+        target_client_msg_id: String,
+        at: i64,
+    },
+}
+
+impl From<FfiRevision> for Revision {
+    fn from(r: FfiRevision) -> Self {
+        match r {
+            FfiRevision::Edit {
+                target_client_msg_id,
+                text,
+                at,
+            } => Revision::Edit {
+                target: target_client_msg_id,
+                text,
+                at,
+            },
+            FfiRevision::Delete {
+                target_client_msg_id,
+                at,
+            } => Revision::Delete {
+                target: target_client_msg_id,
+                at,
+            },
+        }
+    }
+}
+
 /// One recipient device and the envelope encrypted for it.
 #[derive(uniffi::Record)]
 pub struct FfiOutboxRecipient {
@@ -290,6 +327,17 @@ pub enum FfiMessageBody {
         origin_username: String,
         origin_created_at: i64,
     },
+    /// New text for a message the same author sent earlier.
+    Edit {
+        target_client_msg_id: String,
+        text: String,
+        edited_at: i64,
+    },
+    /// Messages the author has withdrawn.
+    Deleted {
+        target_client_msg_ids: Vec<String>,
+        deleted_at: i64,
+    },
 }
 
 impl From<MessageBody> for FfiMessageBody {
@@ -307,6 +355,22 @@ impl From<MessageBody> for FfiMessageBody {
                 text,
                 origin_username,
                 origin_created_at,
+            },
+            MessageBody::Edit {
+                target_client_msg_id,
+                text,
+                edited_at,
+            } => FfiMessageBody::Edit {
+                target_client_msg_id,
+                text,
+                edited_at,
+            },
+            MessageBody::Deleted {
+                target_client_msg_ids,
+                deleted_at,
+            } => FfiMessageBody::Deleted {
+                target_client_msg_ids,
+                deleted_at,
             },
         }
     }
@@ -327,6 +391,22 @@ impl From<FfiMessageBody> for MessageBody {
                 text,
                 origin_username,
                 origin_created_at,
+            },
+            FfiMessageBody::Edit {
+                target_client_msg_id,
+                text,
+                edited_at,
+            } => MessageBody::Edit {
+                target_client_msg_id,
+                text,
+                edited_at,
+            },
+            FfiMessageBody::Deleted {
+                target_client_msg_ids,
+                deleted_at,
+            } => MessageBody::Deleted {
+                target_client_msg_ids,
+                deleted_at,
             },
         }
     }
@@ -371,6 +451,13 @@ pub struct FfiStoredMessage {
     pub forwarded_from: Option<String>,
     /// When the original was written, so a forward shows the original date.
     pub forwarded_at: Option<i64>,
+    /// When the author last rewrote this. Null if never — what the UI shows as
+    /// edited.
+    pub edited_at: Option<i64>,
+    /// When the author withdrew this. Null if they did not. A row with this set
+    /// has no text: it is a tombstone, and should render as a removed message
+    /// rather than an empty one.
+    pub deleted_at: Option<i64>,
 }
 
 impl From<StoredMessage> for FfiStoredMessage {
@@ -386,6 +473,8 @@ impl From<StoredMessage> for FfiStoredMessage {
             reply_to: m.reply_to,
             forwarded_from: m.forwarded_from,
             forwarded_at: m.forwarded_at,
+            edited_at: m.edited_at,
+            deleted_at: m.deleted_at,
         }
     }
 }
@@ -403,6 +492,8 @@ impl From<FfiStoredMessage> for StoredMessage {
             reply_to: m.reply_to,
             forwarded_from: m.forwarded_from,
             forwarded_at: m.forwarded_at,
+            edited_at: m.edited_at,
+            deleted_at: m.deleted_at,
         }
     }
 }
@@ -656,6 +747,33 @@ impl NotegramCore {
     /// killed — can lose it.
     pub fn enqueue_outbox(&self, entry: FfiOutboxEntry, text: String) -> Result<(), FfiError> {
         Ok(self.lock().enqueue_outbox(&entry.into(), &text)?)
+    }
+
+    /// Applies an edit or a deletion, holding it if the message it names has
+    /// not arrived yet.
+    ///
+    /// `fromPeer` is the sender the AEAD authenticated — null for something
+    /// this device did. An instruction may only touch its own author's
+    /// messages; anything else raises MisattributedMessage rather than being
+    /// applied quietly.
+    ///
+    /// Returns whether it applied. False means held: call
+    /// [`Self::apply_pending_revisions`] after storing new messages.
+    pub fn apply_revision(
+        &self,
+        chat_id: i64,
+        revision: FfiRevision,
+        from_peer: Option<i64>,
+    ) -> Result<bool, FfiError> {
+        Ok(self
+            .lock()
+            .apply_revision(chat_id, &revision.into(), from_peer)?)
+    }
+
+    /// Retries instructions that arrived before the messages they name.
+    /// Returns how many applied. Cheap when nothing is waiting.
+    pub fn apply_pending_revisions(&self) -> Result<u32, FfiError> {
+        Ok(self.lock().apply_pending_revisions()?)
     }
 
     /// Attaches the encrypted copies to a message queued before it could be

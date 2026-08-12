@@ -22,6 +22,11 @@ pub enum Namespace {
 
     Outbox,
 
+    /// Edits and deletions whose target has not arrived yet. An instruction
+    /// can overtake the message it refers to, and dropping it would leave the
+    /// recipient reading text the author has already changed or withdrawn.
+    PendingRevision,
+
     Meta,
 
     /// Decrypted message history, kept locally so conversations survive leaving
@@ -41,6 +46,7 @@ impl Namespace {
             Namespace::KtPin => "kt_pin",
             Namespace::InboundCache => "inbound_cache",
             Namespace::Outbox => "outbox",
+            Namespace::PendingRevision => "pending_revision",
             Namespace::Meta => "meta",
             Namespace::Message => "message",
         }
