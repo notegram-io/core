@@ -586,3 +586,126 @@ fn a_receipt_marks_everything_sent_up_to_its_watermark() {
         .unwrap());
     assert_eq!(status("a"), sdk::MessageStatus::Read);
 }
+
+mod outbox {
+    use super::*;
+    use sdk::{MessageStatus, OutboxEntry, OutboxRecipient};
+
+    fn entry(client_msg_id: &str, created_at: i64) -> OutboxEntry {
+        OutboxEntry {
+            client_msg_id: client_msg_id.to_string(),
+            chat_id: 42,
+            peer_user_id: 7,
+            schema: "e2ee.v1".to_string(),
+            suite: "libsignal.x3dh".to_string(),
+            recipients: vec![OutboxRecipient {
+                user_id: 7,
+                device_id: 7001,
+                envelope_type: "signal.v1".to_string(),
+                header: vec![1],
+                ciphertext: vec![2, 3, 4],
+            }],
+            associated_data: b"ad".to_vec(),
+            forward_info: None,
+            reply_to: None,
+            created_at,
+            attempts: 0,
+        }
+    }
+
+    /// The point of the queue: a message the network never took is still there
+    /// after the process dies, with its text and its envelope intact. Before
+    /// this, an unsent message existed only in a view.
+    #[test]
+    fn a_queued_message_survives_reopening_the_store() {
+        let backend = MemoryBackend::new();
+        let mut client = NotegramClient::open(ALICE_KEY, backend).unwrap();
+        client.enqueue_outbox(&entry("c-1", 1000), "hello").unwrap();
+
+        let client = NotegramClient::open(ALICE_KEY, client.into_backend()).unwrap();
+        let queued = client.pending_outbox().unwrap();
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].client_msg_id, "c-1");
+        assert_eq!(
+            queued[0].recipients[0].ciphertext,
+            vec![2, 3, 4],
+            "the envelope is kept, so the retry sends the same bytes"
+        );
+
+        let history = client.list_messages(42, 0).unwrap();
+        assert_eq!(history.len(), 1, "the user sees it in the chat meanwhile");
+        assert_eq!(history[0].text, "hello");
+        assert_eq!(history[0].status, MessageStatus::Pending);
+    }
+
+    /// Delivering a chat out of order rearranges it for the recipient, and
+    /// nothing later undoes that — so the queue hands messages back in the
+    /// order they were typed, whatever order they were written in.
+    #[test]
+    fn the_queue_walks_in_the_order_the_user_typed() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.enqueue_outbox(&entry("c-3", 3000), "third").unwrap();
+        client.enqueue_outbox(&entry("c-1", 1000), "first").unwrap();
+        client
+            .enqueue_outbox(&entry("c-2", 2000), "second")
+            .unwrap();
+
+        let ids: Vec<_> = client
+            .pending_outbox()
+            .unwrap()
+            .into_iter()
+            .map(|e| e.client_msg_id)
+            .collect();
+        assert_eq!(ids, vec!["c-1", "c-2", "c-3"]);
+    }
+
+    /// Acceptance is the only exit. The row adopts the server's time so this
+    /// device orders the conversation the same way every other one will.
+    #[test]
+    fn acceptance_clears_the_queue_and_adopts_the_servers_time() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.enqueue_outbox(&entry("c-1", 1000), "hello").unwrap();
+        client
+            .complete_outbox(42, "c-1", 1000, 1_700_000_000_000)
+            .unwrap();
+
+        assert!(client.pending_outbox().unwrap().is_empty());
+        let history = client.list_messages(42, 0).unwrap();
+        assert_eq!(history.len(), 1, "it is not duplicated by the rewrite");
+        assert_eq!(history[0].status, MessageStatus::Sent);
+        assert_eq!(history[0].created_at, 1_700_000_000_000);
+        assert_eq!(history[0].text, "hello", "the text survives the move");
+    }
+
+    /// A failed attempt is counted, not punished: the message stays queued,
+    /// because a queue that drops messages is the thing being fixed.
+    #[test]
+    fn a_failed_attempt_leaves_the_message_queued() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.enqueue_outbox(&entry("c-1", 1000), "hello").unwrap();
+
+        assert!(client.note_outbox_attempt("c-1", 1000).unwrap());
+        assert!(client.note_outbox_attempt("c-1", 1000).unwrap());
+
+        let queued = client.pending_outbox().unwrap();
+        assert_eq!(queued.len(), 1);
+        assert_eq!(queued[0].attempts, 2);
+        assert_eq!(
+            client.list_messages(42, 0).unwrap()[0].status,
+            MessageStatus::Pending,
+            "still pending, never failed"
+        );
+    }
+
+    /// Noting an attempt against something already accepted must not put it
+    /// back: a reply that arrives after the queue was cleared is ordinary.
+    #[test]
+    fn noting_an_attempt_on_an_accepted_message_does_nothing() {
+        let mut client = NotegramClient::open(ALICE_KEY, MemoryBackend::new()).unwrap();
+        client.enqueue_outbox(&entry("c-1", 1000), "hello").unwrap();
+        client.complete_outbox(42, "c-1", 1000, 2000).unwrap();
+
+        assert!(!client.note_outbox_attempt("c-1", 1000).unwrap());
+        assert!(client.pending_outbox().unwrap().is_empty());
+    }
+}

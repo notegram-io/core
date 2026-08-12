@@ -5,6 +5,7 @@ use store::{Backend, Namespace, SecureStore};
 use crate::body::MessageBody;
 use crate::identity::{Identity, PublicIdentity};
 use crate::messages::{self, MessageStatus, StoredMessage};
+use crate::outbox::{self, OutboxEntry, OutboxRecipient};
 use crate::session::{
     establish_inbound, establish_outbound, InboundPreKeys, PeerAddress, PreKeyBundle,
 };
@@ -623,6 +624,161 @@ impl<B: Backend> NotegramClient<B> {
             .into_iter()
             .map(|m| (m.chat_id, m.client_msg_id))
             .collect())
+    }
+
+    /// Records a message that is ready to send but has not been accepted yet,
+    /// and puts it in local history as [`MessageStatus::Pending`] in the same
+    /// step.
+    ///
+    /// Both halves matter. The history row is what the user sees, so writing it
+    /// here rather than after the server answers is what makes a message
+    /// survive a lost network and a restart. The queue entry carries the
+    /// envelope, so the retry sends the same bytes rather than encrypting
+    /// again — the server deduplicates on the client id and rejects a second
+    /// attempt whose contents differ, which is exactly what a fresh encryption
+    /// would be.
+    pub fn enqueue_outbox(&mut self, entry: &OutboxEntry, text: &str) -> Result<()> {
+        let message = StoredMessage {
+            chat_id: entry.chat_id,
+            peer_user_id: entry.peer_user_id,
+            outgoing: true,
+            client_msg_id: entry.client_msg_id.clone(),
+            text: text.to_string(),
+            created_at: entry.created_at,
+            status: MessageStatus::Pending,
+            reply_to: entry.reply_to,
+            forwarded_from: None,
+            forwarded_at: None,
+        };
+        self.save_message(&message)?;
+        self.store.put(
+            Namespace::Outbox,
+            &outbox::outbox_key(entry.created_at, &entry.client_msg_id),
+            &outbox::encode_entry(entry),
+        )?;
+        Ok(())
+    }
+
+    /// Attaches the encrypted copies to a message that was queued before it
+    /// could be encrypted, leaving everything else about it alone.
+    ///
+    /// Used for the first message to a peer sent while offline: the text was
+    /// recorded straight away so it could not be lost, and the envelopes are
+    /// built once there is a link to fetch the recipient's bundle over.
+    pub fn attach_outbox_envelopes(
+        &mut self,
+        client_msg_id: &str,
+        queued_at: i64,
+        recipients: Vec<OutboxRecipient>,
+        associated_data: Vec<u8>,
+    ) -> Result<bool> {
+        let key = outbox::outbox_key(queued_at, client_msg_id);
+        let Some(raw) = self.store.get(Namespace::Outbox, &key)? else {
+            return Ok(false);
+        };
+        let mut entry = outbox::decode_entry(&raw)?;
+        entry.recipients = recipients;
+        entry.associated_data = associated_data;
+        self.store
+            .put(Namespace::Outbox, &key, &outbox::encode_entry(&entry))?;
+        Ok(true)
+    }
+
+    /// One message of a chat by the id its sender chose, for a caller that has
+    /// the id and needs what was written down under it.
+    pub fn message_by_client_id(
+        &self,
+        chat_id: i64,
+        client_msg_id: &str,
+    ) -> Result<Option<StoredMessage>> {
+        let prefix = messages::chat_key_prefix(chat_id);
+        for (key, value) in self.store.list(Namespace::Message)? {
+            if !key.starts_with(&prefix) {
+                continue;
+            }
+            let msg = messages::decode_message(&value)?;
+            if msg.client_msg_id == client_msg_id {
+                return Ok(Some(msg));
+            }
+        }
+        Ok(None)
+    }
+
+    /// Everything still waiting, oldest first.
+    ///
+    /// The order is the order the user typed in, and a caller must send them in
+    /// it: delivering a chat's messages out of order rearranges the
+    /// conversation for the recipient, and nothing later undoes that.
+    pub fn pending_outbox(&self) -> Result<Vec<OutboxEntry>> {
+        let mut out = Vec::new();
+        for (_, value) in self.store.list(Namespace::Outbox)? {
+            out.push(outbox::decode_entry(&value)?);
+        }
+        out.sort_by(|a, b| {
+            a.created_at
+                .cmp(&b.created_at)
+                .then_with(|| a.client_msg_id.cmp(&b.client_msg_id))
+        });
+        Ok(out)
+    }
+
+    /// Marks a queued message as accepted: it leaves the queue and its history
+    /// row moves to [`MessageStatus::Sent`].
+    ///
+    /// `created_at` is the server's, which is what every other device will show
+    /// it under; the local row is rewritten under that time so the ordering
+    /// agrees with the recipient's.
+    pub fn complete_outbox(
+        &mut self,
+        chat_id: i64,
+        client_msg_id: &str,
+        queued_at: i64,
+        server_created_at: i64,
+    ) -> Result<()> {
+        self.store.delete(
+            Namespace::Outbox,
+            &outbox::outbox_key(queued_at, client_msg_id),
+        )?;
+        // Rewritten rather than status-bumped in place: the row is keyed by
+        // creation time, so adopting the server's means moving it.
+        let old_key = messages::message_key(chat_id, queued_at, client_msg_id);
+        if let Some(raw) = self.store.get(Namespace::Message, &old_key)? {
+            let mut msg = messages::decode_message(&raw)?;
+            msg.created_at = server_created_at;
+            msg.status = MessageStatus::Sent;
+            self.store.delete(Namespace::Message, &old_key)?;
+            self.save_message(&msg)?;
+        }
+        Ok(())
+    }
+
+    /// Records that an attempt was made and did not land. The entry stays: a
+    /// message leaves the queue only when the server has it.
+    pub fn note_outbox_attempt(&mut self, client_msg_id: &str, queued_at: i64) -> Result<bool> {
+        let key = outbox::outbox_key(queued_at, client_msg_id);
+        let Some(raw) = self.store.get(Namespace::Outbox, &key)? else {
+            return Ok(false);
+        };
+        let mut entry = outbox::decode_entry(&raw)?;
+        entry.attempts = entry.attempts.saturating_add(1);
+        self.store
+            .put(Namespace::Outbox, &key, &outbox::encode_entry(&entry))?;
+        Ok(true)
+    }
+
+    /// Drops a queued message the recipient roster has outgrown.
+    ///
+    /// The stored envelope is addressed to the devices a peer had when it was
+    /// encrypted; once they gain one, the server refuses the fan-out as
+    /// incomplete and no number of retries will change that. The caller
+    /// re-encrypts against a fresh roster and queues again under the same
+    /// client id — safe precisely because the refused attempt was never stored.
+    pub fn discard_outbox(&mut self, client_msg_id: &str, queued_at: i64) -> Result<()> {
+        self.store.delete(
+            Namespace::Outbox,
+            &outbox::outbox_key(queued_at, client_msg_id),
+        )?;
+        Ok(())
     }
 
     /// The most recent message of every chat, newest chat first — enough to

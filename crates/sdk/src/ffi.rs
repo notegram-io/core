@@ -2,8 +2,8 @@ use std::sync::Mutex;
 
 use crate::{
     message_ref as sdk_message_ref, Identity, InboundPreKeys, MessageBody, MessageStatus,
-    NotegramClient, PeerAddress, PreKeyBundle, PublicIdentity, RecipientPreKeyBundle, SdkError,
-    StoredMessage,
+    NotegramClient, OutboxEntry, OutboxRecipient, PeerAddress, PreKeyBundle, PublicIdentity,
+    RecipientPreKeyBundle, SdkError, StoredMessage,
 };
 use store::SqliteBackend;
 
@@ -152,9 +152,99 @@ pub struct FfiVerifiedPrekeyBundle {
     pub one_time_pre_key_pub: Option<Vec<u8>>,
 }
 
+/// One recipient device and the envelope encrypted for it.
+#[derive(uniffi::Record)]
+pub struct FfiOutboxRecipient {
+    pub user_id: i64,
+    pub device_id: i64,
+    pub envelope_type: String,
+    pub header: Vec<u8>,
+    pub ciphertext: Vec<u8>,
+}
+
+/// A message written down and waiting for the server to take it.
+///
+/// It carries the finished envelope rather than the text to encrypt again: the
+/// server deduplicates on `client_msg_id` and refuses a second attempt whose
+/// contents differ, and encrypting again would produce exactly that, since the
+/// ratchet advances every time.
+#[derive(uniffi::Record)]
+pub struct FfiOutboxEntry {
+    pub client_msg_id: String,
+    pub chat_id: i64,
+    pub peer_user_id: i64,
+    pub schema: String,
+    pub suite: String,
+    pub recipients: Vec<FfiOutboxRecipient>,
+    pub associated_data: Vec<u8>,
+    pub forward_info: Option<Vec<u8>>,
+    pub reply_to: Option<i64>,
+    pub created_at: i64,
+    pub attempts: u32,
+}
+
+impl From<FfiOutboxEntry> for OutboxEntry {
+    fn from(e: FfiOutboxEntry) -> Self {
+        OutboxEntry {
+            client_msg_id: e.client_msg_id,
+            chat_id: e.chat_id,
+            peer_user_id: e.peer_user_id,
+            schema: e.schema,
+            suite: e.suite,
+            recipients: e
+                .recipients
+                .into_iter()
+                .map(|r| OutboxRecipient {
+                    user_id: r.user_id,
+                    device_id: r.device_id,
+                    envelope_type: r.envelope_type,
+                    header: r.header,
+                    ciphertext: r.ciphertext,
+                })
+                .collect(),
+            associated_data: e.associated_data,
+            forward_info: e.forward_info,
+            reply_to: e.reply_to,
+            created_at: e.created_at,
+            attempts: e.attempts,
+        }
+    }
+}
+
+impl From<OutboxEntry> for FfiOutboxEntry {
+    fn from(e: OutboxEntry) -> Self {
+        FfiOutboxEntry {
+            client_msg_id: e.client_msg_id,
+            chat_id: e.chat_id,
+            peer_user_id: e.peer_user_id,
+            schema: e.schema,
+            suite: e.suite,
+            recipients: e
+                .recipients
+                .into_iter()
+                .map(|r| FfiOutboxRecipient {
+                    user_id: r.user_id,
+                    device_id: r.device_id,
+                    envelope_type: r.envelope_type,
+                    header: r.header,
+                    ciphertext: r.ciphertext,
+                })
+                .collect(),
+            associated_data: e.associated_data,
+            forward_info: e.forward_info,
+            reply_to: e.reply_to,
+            created_at: e.created_at,
+            attempts: e.attempts,
+        }
+    }
+}
+
 /// How far an outgoing message got. Only ever moves forward.
 #[derive(uniffi::Enum, Clone, Copy)]
 pub enum FfiMessageStatus {
+    /// Written down and queued, not yet accepted by the server. Retried until
+    /// it lands, so it is a stage rather than a failure.
+    Pending,
     Sent,
     Delivered,
     Read,
@@ -163,6 +253,7 @@ pub enum FfiMessageStatus {
 impl From<MessageStatus> for FfiMessageStatus {
     fn from(s: MessageStatus) -> Self {
         match s {
+            MessageStatus::Pending => FfiMessageStatus::Pending,
             MessageStatus::Sent => FfiMessageStatus::Sent,
             MessageStatus::Delivered => FfiMessageStatus::Delivered,
             MessageStatus::Read => FfiMessageStatus::Read,
@@ -173,6 +264,7 @@ impl From<MessageStatus> for FfiMessageStatus {
 impl From<FfiMessageStatus> for MessageStatus {
     fn from(s: FfiMessageStatus) -> Self {
         match s {
+            FfiMessageStatus::Pending => MessageStatus::Pending,
             FfiMessageStatus::Sent => MessageStatus::Sent,
             FfiMessageStatus::Delivered => MessageStatus::Delivered,
             FfiMessageStatus::Read => MessageStatus::Read,
@@ -553,6 +645,102 @@ impl NotegramCore {
 
     pub fn save_message(&self, message: FfiStoredMessage) -> Result<(), FfiError> {
         Ok(self.lock().save_message(&message.into())?)
+    }
+
+    /// Writes a message down before it is sent, and shows it in the chat as
+    /// pending in the same step.
+    ///
+    /// Call this before the first delivery attempt, not after a failure: the
+    /// point is that the message exists on disk from the moment the user
+    /// pressed send, so nothing about the network — or about the app being
+    /// killed — can lose it.
+    pub fn enqueue_outbox(&self, entry: FfiOutboxEntry, text: String) -> Result<(), FfiError> {
+        Ok(self.lock().enqueue_outbox(&entry.into(), &text)?)
+    }
+
+    /// Attaches the encrypted copies to a message queued before it could be
+    /// encrypted — the first message to a peer, sent while offline. Returns
+    /// false when the entry is gone, which means it was already accepted.
+    pub fn attach_outbox_envelopes(
+        &self,
+        client_msg_id: String,
+        queued_at: i64,
+        recipients: Vec<FfiOutboxRecipient>,
+        associated_data: Vec<u8>,
+    ) -> Result<bool, FfiError> {
+        let recipients = recipients
+            .into_iter()
+            .map(|r| OutboxRecipient {
+                user_id: r.user_id,
+                device_id: r.device_id,
+                envelope_type: r.envelope_type,
+                header: r.header,
+                ciphertext: r.ciphertext,
+            })
+            .collect();
+        Ok(self.lock().attach_outbox_envelopes(
+            &client_msg_id,
+            queued_at,
+            recipients,
+            associated_data,
+        )?)
+    }
+
+    /// One message by the id its sender chose. What a queued-but-unencrypted
+    /// entry needs to be turned into an envelope later.
+    pub fn message_by_client_id(
+        &self,
+        chat_id: i64,
+        client_msg_id: String,
+    ) -> Result<Option<FfiStoredMessage>, FfiError> {
+        Ok(self
+            .lock()
+            .message_by_client_id(chat_id, &client_msg_id)?
+            .map(FfiStoredMessage::from))
+    }
+
+    /// Everything still waiting, oldest first. Send them in this order: a chat
+    /// delivered out of order stays wrong for the recipient.
+    pub fn pending_outbox(&self) -> Result<Vec<FfiOutboxEntry>, FfiError> {
+        Ok(self
+            .lock()
+            .pending_outbox()?
+            .into_iter()
+            .map(FfiOutboxEntry::from)
+            .collect())
+    }
+
+    /// Marks a queued message accepted: it leaves the queue and its row becomes
+    /// Sent under the server's timestamp, which is the one every other device
+    /// will order it by.
+    pub fn complete_outbox(
+        &self,
+        chat_id: i64,
+        client_msg_id: String,
+        queued_at: i64,
+        server_created_at: i64,
+    ) -> Result<(), FfiError> {
+        Ok(self
+            .lock()
+            .complete_outbox(chat_id, &client_msg_id, queued_at, server_created_at)?)
+    }
+
+    /// Counts a failed attempt. Returns false when the message is no longer
+    /// queued, which is what a reply arriving after acceptance looks like.
+    pub fn note_outbox_attempt(
+        &self,
+        client_msg_id: String,
+        queued_at: i64,
+    ) -> Result<bool, FfiError> {
+        Ok(self.lock().note_outbox_attempt(&client_msg_id, queued_at)?)
+    }
+
+    /// Drops a queued message whose stored envelope can no longer be delivered
+    /// — the peer gained a device, so the fan-out is incomplete and no retry
+    /// will fix it. Re-encrypt against the fresh roster and queue again under
+    /// the same client id.
+    pub fn discard_outbox(&self, client_msg_id: String, queued_at: i64) -> Result<(), FfiError> {
+        Ok(self.lock().discard_outbox(&client_msg_id, queued_at)?)
     }
 
     /// Advances an outgoing message's delivery status, matched by the id the

@@ -10,6 +10,10 @@ use crate::SdkError;
 /// since the concept does not apply to them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageStatus {
+    /// Written down but not yet accepted by the server. The message exists in
+    /// full — text, recipients, ciphertext — and is retried until it lands, so
+    /// this is a stage rather than a failure.
+    Pending,
     /// Accepted by the server; the recipient has not fetched it yet.
     Sent,
     /// The recipient's device fetched and acked it.
@@ -19,11 +23,14 @@ pub enum MessageStatus {
 }
 
 impl MessageStatus {
+    /// On-disk code. Pending takes a new value rather than shifting the others,
+    /// so rows written before it existed still read back as what they were.
     fn code(self) -> u8 {
         match self {
             MessageStatus::Sent => 0,
             MessageStatus::Delivered => 1,
             MessageStatus::Read => 2,
+            MessageStatus::Pending => 3,
         }
     }
 
@@ -32,14 +39,21 @@ impl MessageStatus {
             0 => Some(MessageStatus::Sent),
             1 => Some(MessageStatus::Delivered),
             2 => Some(MessageStatus::Read),
+            3 => Some(MessageStatus::Pending),
             _ => None,
         }
     }
 
     /// Status only ever moves forward: a late delivery notice must not undo a
-    /// read receipt that already arrived.
+    /// read receipt that already arrived. Ordering is by meaning, not by the
+    /// on-disk code — Pending precedes everything despite being added last.
     fn rank(self) -> u8 {
-        self.code()
+        match self {
+            MessageStatus::Pending => 0,
+            MessageStatus::Sent => 1,
+            MessageStatus::Delivered => 2,
+            MessageStatus::Read => 3,
+        }
     }
 }
 

@@ -4,6 +4,7 @@ mod body;
 mod client;
 mod identity;
 mod messages;
+mod outbox;
 mod session;
 
 #[cfg(feature = "uniffi")]
@@ -22,6 +23,7 @@ pub use client::{
 };
 pub use identity::{Identity, PublicIdentity};
 pub use messages::{message_ref, MessageStatus, StoredMessage};
+pub use outbox::{OutboxEntry, OutboxRecipient};
 pub use session::{InboundPreKeys, PeerAddress, PreKeyBundle};
 
 #[derive(Debug, PartialEq, Eq)]
